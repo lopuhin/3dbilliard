@@ -1,3 +1,15 @@
+/*
+
+ TODO:
+ - draw balls
+ - lighting
+ - movement of balls
+ - draw stick, let balls collide
+ - load billiard board model?
+ - replacement for setInterval
+
+*/
+
 function start() {
     var canvas = document.getElementById('main-canvas');
     initGL(canvas);
