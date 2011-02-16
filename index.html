@@ -5,32 +5,48 @@
     <script type="text/javascript" src="sylvester.js"></script>
     <script type="text/javascript" src="glUtils.js"></script>
     <script type="text/javascript" src="billiard.js"></script>
-    <script id="shader-fs" type="x-shader/x-fragment">
+    <script id="shader-fs" type="x-shader/x-fragment"> 
       #ifdef GL_ES
       precision highp float;
       #endif
-
+      
+      varying vec3 vLightWeighting;
       varying vec4 vColor;
-
+      
       void main(void) {
-        gl_FragColor = vColor;
+        gl_FragColor = vec4(vColor.rgb * vLightWeighting, vColor.a);
       }
-    </script>
-
-    <script id="shader-vs" type="x-shader/x-vertex">
+    </script> 
+    
+    <script id="shader-vs" type="x-shader/x-vertex"> 
       attribute vec3 aVertexPosition;
+      attribute vec3 aVertexNormal;
       attribute vec4 aVertexColor;
-
+      
       uniform mat4 uMVMatrix;
       uniform mat4 uPMatrix;
-
+      uniform mat4 uNMatrix;
+      
+      uniform vec3 uAmbientColor;
+      
+      uniform vec3 uLightingDirection;
+      uniform vec3 uDirectionalColor;
+      
+      uniform bool uUseLighting;
+      
+      varying vec3 vLightWeighting;
       varying vec4 vColor;
-
+      
       void main(void) {
         gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
         vColor = aVertexColor;
+
+        vec4 transformedNormal = uNMatrix * vec4(aVertexNormal, 1.0);
+        float directionalLightWeighting = max(dot(transformedNormal.xyz, uLightingDirection), 0.0);
+        vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
       }
-</script>
+    </script> 
+
 
   </head>
   <body onload="start();">

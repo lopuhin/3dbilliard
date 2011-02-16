@@ -29,10 +29,98 @@ function start() {
 
 var squareVertexPositionBuffer;
 var squareVertexColorBuffer;
+var squareVertexNormalBuffer;
 
 var table_max_x = 2, table_max_z = 3;
 
+/*
+var moonVertexPositionBuffer;
+var moonVertexNormalBuffer;
+var moonVertexIndexBuffer;
+var moonVertexColorBuffer;
+*/
+
 function initBuffers() {
+    /*
+    // moon buffers
+    var latitudeBands = 30;
+    var longitudeBands = 30;
+    var radius = 2;
+
+    var vertexPositionData = [];
+    var normalData = [];
+    var vertexColorData = [];
+    for (var latNumber = 0; latNumber <= latitudeBands; latNumber++) {
+	var theta = latNumber * Math.PI / latitudeBands;
+	var sinTheta = Math.sin(theta);
+	var cosTheta = Math.cos(theta);
+
+	for (var longNumber = 0; longNumber <= longitudeBands; longNumber++) {
+            var phi = longNumber * 2 * Math.PI / longitudeBands;
+            var sinPhi = Math.sin(phi);
+            var cosPhi = Math.cos(phi);
+
+            var x = cosPhi * sinTheta;
+            var y = cosTheta;
+            var z = sinPhi * sinTheta;
+
+            normalData.push(x);
+            normalData.push(y);
+            normalData.push(z);
+            vertexPositionData.push(radius * x);
+            vertexPositionData.push(radius * y);
+            vertexPositionData.push(radius * z);
+	    // all are red for now
+	    // TODO - multiple colors, and color some balls white in the equator
+	    vertexColorData.push(1.0);
+	    vertexColorData.push(0.0);
+	    vertexColorData.push(0.0);
+	    vertexColorData.push(1.0);
+	}
+    }
+
+    var indexData = [];
+    for (latNumber = 0; latNumber < latitudeBands; latNumber++) {
+      for (var longNumber = 0; longNumber < longitudeBands; longNumber++) {
+        var first = (latNumber * (longitudeBands + 1)) + longNumber;
+        var second = first + longitudeBands + 1;
+        indexData.push(first);
+        indexData.push(second);
+        indexData.push(first + 1);
+
+        indexData.push(second);
+        indexData.push(second + 1);
+        indexData.push(first + 1);
+      }
+    }
+
+    moonVertexNormalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normalData), gl.STATIC_DRAW);
+    moonVertexNormalBuffer.itemSize = 3;
+    moonVertexNormalBuffer.numItems = normalData.length / 3;
+ 
+    moonVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), gl.STATIC_DRAW);
+    moonVertexPositionBuffer.itemSize = 3;
+    moonVertexPositionBuffer.numItems = vertexPositionData.length / 3;
+ 
+    moonVertexColorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexColorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexColorData), gl.STATIC_DRAW);
+    moonVertexColorBuffer.itemSize = 4;
+    moonVertexColorBuffer.numItems = vertexColorData.length / 4;
+    
+    moonVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
+    // FIXME - STREAM_DRAW?
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+    moonVertexIndexBuffer.itemSize = 1;
+    moonVertexIndexBuffer.numItems = indexData.length;
+    */
+    
+    // table buffers
     squareVertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
     var vertices = [
@@ -48,12 +136,24 @@ function initBuffers() {
     squareVertexColorBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexColorBuffer);
     var colors = [];
-    for (var i=0; i < 4; i++) {
+    for (var i = 0; i < 4; i++) {
       colors = colors.concat([0.0, 0.5, 0.0, 1.0]);
     }
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
     squareVertexColorBuffer.itemSize = 4;
     squareVertexColorBuffer.numItems = 4;
+
+    squareVertexNormalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexNormalBuffer);
+    var normals = [
+	0.0,  1.0,  0.0,
+	0.0,  1.0,  0.0,
+	0.0,  1.0,  0.0,
+	0.0,  1.0,  0.0];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+    squareVertexNormalBuffer.itemSize = 3;
+    squareVertexNormalBuffer.numItems = 4;
+    
 }
 
 var camera_angle_horiz = 30, camera_angle_vert = 10;
@@ -64,11 +164,48 @@ function drawScene() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
 
+    gl.uniform3f(shaderProgram.ambientColorUniform, 0.2, 0.2, 0.2);
+    var lightingDirection = Vector.create([-1.0, -1.0, -1.0]);
+    var adjustedLD = lightingDirection.toUnitVector().x(-1);
+    var flatLD = adjustedLD.flatten();
+    gl.uniform3f(
+        shaderProgram.lightingDirectionUniform,
+        flatLD[0], flatLD[1], flatLD[2]
+    );
+    gl.uniform3f(shaderProgram.directionalColorUniform, 0.8, 0.8, 0.8);
+
     loadIdentity();
+    // camera position
     mvTranslate([0.0, 0.0, -7.0]);
     mvRotate(camera_angle_vert, [1, 0, 0]);
     mvRotate(camera_angle_horiz, [0, 1, 0]);
 
+    /*
+    // draw the moon
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
+    gl.vertexAttribPointer(
+	shaderProgram.vertexPositionAttribute,
+	moonVertexPositionBuffer.itemSize,
+	gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
+    gl.vertexAttribPointer(
+	shaderProgram.vertexNormalAttribute,
+	moonVertexNormalBuffer.itemSize,
+	gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexColorBuffer);
+    gl.vertexAttribPointer(
+	shaderProgram.vertexColorAttribute,
+	moonVertexColorBuffer.itemSize,
+	gl.FLOAT, false, 0, 0);
+    
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
+    setMatrixUniforms();
+    gl.drawElements(gl.TRIANGLES, moonVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+     */
+    
+    // draw the table    
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
     gl.vertexAttribPointer(
 	shaderProgram.vertexPositionAttribute,
@@ -78,6 +215,11 @@ function drawScene() {
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexColorBuffer);
     gl.vertexAttribPointer(
 	shaderProgram.vertexColorAttribute, squareVertexColorBuffer.itemSize,
+	gl.FLOAT, false, 0, 0);
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexNormalBuffer);
+    gl.vertexAttribPointer(
+	shaderProgram.vertexNormalAttribute, squareVertexNormalBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
 
     setMatrixUniforms();
@@ -216,34 +358,46 @@ function mvRotate(ang, v) {
 // Shaders
 
 var shaderProgram;
-
 function initShaders() {
     var fragmentShader = getShader(gl, "shader-fs");
     var vertexShader = getShader(gl, "shader-vs");
-
+    
     shaderProgram = gl.createProgram();
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
-
+    
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
 	alert("Could not initialise shaders");
     }
-
+    
     gl.useProgram(shaderProgram);
-
+    
     shaderProgram.vertexPositionAttribute = gl.getAttribLocation(
 	shaderProgram, "aVertexPosition");
     gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
 
+    shaderProgram.vertexNormalAttribute =
+	gl.getAttribLocation(shaderProgram, "aVertexNormal");
+    gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
+        
     shaderProgram.vertexColorAttribute = gl.getAttribLocation(
 	shaderProgram, "aVertexColor");
     gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
-    
+
     shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
+    
+    shaderProgram.ambientColorUniform =
+	gl.getUniformLocation(shaderProgram, "uAmbientColor");
+    shaderProgram.lightingDirectionUniform =
+	gl.getUniformLocation(shaderProgram, "uLightingDirection");
+    shaderProgram.directionalColorUniform =
+	gl.getUniformLocation(shaderProgram, "uDirectionalColor");
     
 }
+
 
 function getShader(gl, id) {
     var shaderScript = document.getElementById(id);
@@ -284,6 +438,11 @@ function setMatrixUniforms() {
 	shaderProgram.pMatrixUniform, false, new Float32Array(pMatrix.flatten()));
     gl.uniformMatrix4fv(
 	shaderProgram.mvMatrixUniform, false, new Float32Array(mvMatrix.flatten()));
+
+    var normalMatrix = mvMatrix.inverse();
+    normalMatrix = normalMatrix.transpose();
+    gl.uniformMatrix4fv(
+	shaderProgram.nMatrixUniform, false, new Float32Array(normalMatrix.flatten()));
 }
 
 // key events
