@@ -14,7 +14,8 @@ function initShaders() {
     
     gl.useProgram(shaderProgram);
     
-    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    shaderProgram.vertexPositionAttribute =
+	gl.getAttribLocation(shaderProgram, "aVertexPosition");
     gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
 
     shaderProgram.vertexColorAttribute = gl.getAttribLocation(
@@ -32,14 +33,17 @@ function initShaders() {
     shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
     shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
     shaderProgram.useLightingUniform = gl.getUniformLocation(shaderProgram, "uUseLighting");
+    shaderProgram.useTexturesUniform = gl.getUniformLocation(shaderProgram, "uUseTextures");
     shaderProgram.ambientColorUniform = gl.getUniformLocation(shaderProgram, "uAmbientColor");
-    shaderProgram.pointLightingLocationUniform = gl.getUniformLocation(shaderProgram, "uPointLightingLocation");
-    shaderProgram.pointLightingColorUniform = gl.getUniformLocation(shaderProgram, "uPointLightingColor");
+    shaderProgram.pointLightingLocationUniform =
+	gl.getUniformLocation(shaderProgram, "uPointLightingLocation");
+    shaderProgram.pointLightingColorUniform =
+	gl.getUniformLocation(shaderProgram, "uPointLightingColor");
 }
 
 
 var moonTexture;
-var crateTexture;
+
 function initTextures() {
     moonTexture = gl.createTexture();
     moonTexture.image = new Image();
@@ -47,13 +51,6 @@ function initTextures() {
 	handleLoadedTexture(moonTexture);
     };
     moonTexture.image.src = "moon.gif";
-    
-    crateTexture = gl.createTexture();
-    crateTexture.image = new Image();
-    crateTexture.image.onload = function() {
-	handleLoadedTexture(crateTexture);
-    };
-    crateTexture.image.src = "moon.gif";
 }
 
 
@@ -75,10 +72,10 @@ function initBuffers() {
     tableVertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexPositionBuffer);
     var vertices = [
-       -1.0, -1.0,  1.0,
-        1.0, -1.0,  1.0,
-        1.0,  1.0,  1.0,
-       -1.0,  1.0,  1.0];
+       -2.0, 0.0, -3.0,
+        2.0, 0.0, -3.0,
+        2.0, 0.0,  3.0,
+       -2.0, 0.0,  3.0];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     tableVertexPositionBuffer.itemSize = 3;
     tableVertexPositionBuffer.numItems = 4;
@@ -86,25 +83,14 @@ function initBuffers() {
     tableVertexNormalBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexNormalBuffer);
     var vertexNormals = [
-       0.0,  0.0,  1.0,
-       0.0,  0.0,  1.0,
-       0.0,  0.0,  1.0,
-       0.0,  0.0,  1.0];
+       0.0,  1.0,  0.0,
+       0.0,  1.0,  0.0,
+       0.0,  1.0,  0.0,
+       0.0,  1.0,  0.0];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals), gl.STATIC_DRAW);
     tableVertexNormalBuffer.itemSize = 3;
     tableVertexNormalBuffer.numItems = 4;
- 
-    tableVertexTextureCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexTextureCoordBuffer);
-    var textureCoords = [
-	0.0, 0.0,
-	1.0, 0.0,
-	1.0, 1.0,
-	0.0, 1.0];
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
-    tableVertexTextureCoordBuffer.itemSize = 2;
-    tableVertexTextureCoordBuffer.numItems = 4;
-
+    
     var vertexColors = [
 	1.0, 0.0, 0.0, 1.0,
 	1.0, 0.0, 0.0, 1.0,
@@ -125,9 +111,9 @@ function initBuffers() {
     tableVertexIndexBuffer.numItems = 6;
 
  
-    var latitudeBands = 30;
-    var longitudeBands = 30;
-    var radius = 2;
+    var latitudeBands = 15;
+    var longitudeBands = 15;
+    var radius = 0.2;
  
     var vertexPositionData = [];
     var normalData = [];
@@ -209,7 +195,10 @@ function initBuffers() {
     moonVertexIndexBuffer.itemSize = 1;
     moonVertexIndexBuffer.numItems = indexData.length;
   }
- 
+
+
+var camera_angle_vert = 10, camera_angle_horiz = 30;
+
  
 function drawScene() {
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -228,12 +217,13 @@ function drawScene() {
  
     loadIdentity();
  
-    mvTranslate([0, 0, -20]);
- 
-    mvRotate(180, [0, 1, 0]);
-    mvTranslate([5, 0, 0]);
+    mvTranslate([0, 0, -5]);
+     
+    mvRotate(camera_angle_vert,  [1, 0, 0]);
+    mvRotate(camera_angle_horiz, [0, 1, 0]);
 
     // table
+    gl.uniform1i(shaderProgram.useTexturesUniform, false);
     gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexPositionBuffer);
     gl.vertexAttribPointer(
 	shaderProgram.vertexPositionAttribute, tableVertexPositionBuffer.itemSize,
@@ -243,28 +233,19 @@ function drawScene() {
     gl.vertexAttribPointer(
 	shaderProgram.vertexNormalAttribute, tableVertexNormalBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
-    
-    gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexTextureCoordBuffer);
-    gl.vertexAttribPointer(
-	shaderProgram.textureCoordAttribute, tableVertexTextureCoordBuffer.itemSize,
-	gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexColorBuffer);
     gl.vertexAttribPointer(
 	shaderProgram.vertexColorAttribute,
 	tableVertexColorBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
-    /*
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, crateTexture);
-    gl.uniform1i(shaderProgram.samplerUniform, 0);
-    */
-    
+     
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tableVertexIndexBuffer);
     setMatrixUniforms();
     gl.drawElements(gl.TRIANGLES, tableVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 
     // ball
+    gl.uniform1i(shaderProgram.useTexturesUniform, true);
     
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, moonTexture);
@@ -310,11 +291,39 @@ function animate() {
 
 
 function tick() {
+    handleKeys();
     drawScene();
     animate();
 }
  
 
+var camera_angle_shift = 0.5;
+
+function handleKeys() {
+    if (currentlyPressedKeys[KeyEvent.DOM_VK_PAGE_UP]) {
+
+    }
+    if (currentlyPressedKeys[KeyEvent.DOM_VK_PAGE_DOWN]) {
+
+    }
+    if (currentlyPressedKeys[37]) {
+	// Left cursor key
+	camera_angle_horiz += camera_angle_shift;
+    }
+    if (currentlyPressedKeys[39]) {
+	// Right cursor key
+	camera_angle_horiz -= camera_angle_shift;
+    }
+    if (currentlyPressedKeys[38]) {
+	// Up cursor key
+	camera_angle_vert += camera_angle_shift;
+    }
+    if (currentlyPressedKeys[40]) {
+	// Down cursor key
+	camera_angle_vert -= camera_angle_shift;
+    }
+}
+    
 function webGLStart() {
     var canvas = document.getElementById("main-canvas");
     initGL(canvas);
@@ -328,6 +337,9 @@ function webGLStart() {
     
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
+
+    document.onkeydown = handleKeyDown;
+    document.onkeyup = handleKeyUp;
     
     setInterval(tick, 15);
 }
