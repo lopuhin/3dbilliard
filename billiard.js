@@ -22,19 +22,24 @@ function initShaders() {
 	shaderProgram, "aVertexColor");
     gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
 
-    shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+    shaderProgram.textureCoordAttribute =
+	gl.getAttribLocation(shaderProgram, "aTextureCoord");
     gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
     
-    shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+    shaderProgram.vertexNormalAttribute =
+	gl.getAttribLocation(shaderProgram, "aVertexNormal");
     gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
     
     shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
     shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
-    shaderProgram.useLightingUniform = gl.getUniformLocation(shaderProgram, "uUseLighting");
-    shaderProgram.useTexturesUniform = gl.getUniformLocation(shaderProgram, "uUseTextures");
-    shaderProgram.ambientColorUniform = gl.getUniformLocation(shaderProgram, "uAmbientColor");
+    shaderProgram.useLightingUniform =
+	gl.getUniformLocation(shaderProgram, "uUseLighting");
+    shaderProgram.useTexturesUniform =
+	gl.getUniformLocation(shaderProgram, "uUseTextures");
+    shaderProgram.ambientColorUniform =
+	gl.getUniformLocation(shaderProgram, "uAmbientColor");
     shaderProgram.pointLightingLocationUniform =
 	gl.getUniformLocation(shaderProgram, "uPointLightingLocation");
     shaderProgram.pointLightingColorUniform =
@@ -42,15 +47,16 @@ function initShaders() {
 }
 
 
-var moonTexture;
-
 function initTextures() {
-    moonTexture = gl.createTexture();
-    moonTexture.image = new Image();
-    moonTexture.image.onload = function() {
-	handleLoadedTexture(moonTexture);
-    };
-    moonTexture.image.src = "moon.gif";
+    for (var i = 0; i < balls.length; i++ ) {
+	var ball = balls[i];
+	ball.texture = gl.createTexture();
+	ball.texture.image = new Image();
+	ball.texture.image.onload = function() {
+	    handleLoadedTexture(ball.texture);
+	};
+	ball.texture.image.src = "img/" + ball.img;
+    }
 }
 
 
@@ -66,7 +72,7 @@ var moonVertexTextureCoordBuffer;
 var moonVertexIndexBuffer;
 var moonVertexColorBuffer;
 
-var draw_table = true;
+var radius = 0.1;
 
 function initBuffers() {
     tableVertexPositionBuffer = gl.createBuffer();
@@ -92,10 +98,10 @@ function initBuffers() {
     tableVertexNormalBuffer.numItems = 4;
     
     var vertexColors = [
-	1.0, 0.0, 0.0, 1.0,
-	1.0, 0.0, 0.0, 1.0,
-	1.0, 0.0, 0.0, 1.0,
-	1.0, 0.0, 0.0, 1.0];
+	0.0, 1.0, 0.0, 1.0,
+	0.0, 1.0, 0.0, 1.0,
+	0.0, 1.0, 0.0, 1.0,
+	0.0, 1.0, 0.0, 1.0];
     tableVertexColorBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexColorBuffer);    
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexColors), gl.STATIC_DRAW);
@@ -113,7 +119,6 @@ function initBuffers() {
  
     var latitudeBands = 15;
     var longitudeBands = 15;
-    var radius = 0.2;
  
     var vertexPositionData = [];
     var normalData = [];
@@ -198,26 +203,26 @@ function initBuffers() {
 
 
 var camera_angle_vert = 10, camera_angle_horiz = 30;
-
+var camera_radius = 5;
  
 function drawScene() {
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
  
     perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
- 
+
     gl.uniform1i(shaderProgram.useLightingUniform, true);
     gl.uniform3f(shaderProgram.ambientColorUniform, 0.2, 0.2, 0.2);
     
     gl.uniform3f(
-        shaderProgram.pointLightingLocationUniform, 0.0, 0.0, -20.0);
+        shaderProgram.pointLightingLocationUniform, 0.0, 1.0, -3.0);
  
     gl.uniform3f(
         shaderProgram.pointLightingColorUniform, 0.8, 0.8, 0.8);
  
     loadIdentity();
  
-    mvTranslate([0, 0, -5]);
+    mvTranslate([0, 0, -camera_radius]);
      
     mvRotate(camera_angle_vert,  [1, 0, 0]);
     mvRotate(camera_angle_horiz, [0, 1, 0]);
@@ -246,10 +251,6 @@ function drawScene() {
 
     // ball
     gl.uniform1i(shaderProgram.useTexturesUniform, true);
-    
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, moonTexture);
-    gl.uniform1i(shaderProgram.samplerUniform, 0);
  
     gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
     gl.vertexAttribPointer(
@@ -272,9 +273,19 @@ function drawScene() {
 	gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
-    setMatrixUniforms();
-    gl.drawElements(gl.TRIANGLES, moonVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+    
 
+    for(var i = 0; i < balls.length; i++ ) {
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, balls[i].texture);
+	gl.uniform1i(shaderProgram.samplerUniform, 0);
+
+	mvPushMatrix();
+	mvTranslate([balls[i].x, radius, balls[i].y]);
+	setMatrixUniforms();
+	gl.drawElements(gl.TRIANGLES, moonVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	mvPopMatrix();
+    }
 }
  
  
@@ -298,13 +309,14 @@ function tick() {
  
 
 var camera_angle_shift = 0.5;
+var camera_radius_shift = 0.05;
 
 function handleKeys() {
     if (currentlyPressedKeys[KeyEvent.DOM_VK_PAGE_UP]) {
-
+	camera_radius -= camera_radius_shift;
     }
     if (currentlyPressedKeys[KeyEvent.DOM_VK_PAGE_DOWN]) {
-
+	camera_radius += camera_radius_shift;
     }
     if (currentlyPressedKeys[37]) {
 	// Left cursor key
