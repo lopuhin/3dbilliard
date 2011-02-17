@@ -7,7 +7,7 @@
  - draw stick, let balls collide
  - load billiard board model?
  - replacement for setInterval
-
+ - move shaders from index.html to js
 */
 
 function start() {
@@ -15,7 +15,8 @@ function start() {
     initGL(canvas);
     initShaders();
     initBuffers();
-
+    initTexture();
+    
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
@@ -25,6 +26,7 @@ function start() {
     document.onkeyup = handleKeyUp;
     
     setInterval(tick, 15);
+    //tick();
 }
 
 var squareVertexPositionBuffer;
@@ -33,15 +35,16 @@ var squareVertexNormalBuffer;
 
 var table_max_x = 2, table_max_z = 3;
 
-/*
+
 var moonVertexPositionBuffer;
 var moonVertexNormalBuffer;
 var moonVertexIndexBuffer;
 var moonVertexColorBuffer;
-*/
+var moonVertexTextureCoordBuffer;
+
 
 function initBuffers() {
-    /*
+
     // moon buffers
     var latitudeBands = 30;
     var longitudeBands = 30;
@@ -50,6 +53,7 @@ function initBuffers() {
     var vertexPositionData = [];
     var normalData = [];
     var vertexColorData = [];
+    var textureCoordData = [];
     for (var latNumber = 0; latNumber <= latitudeBands; latNumber++) {
 	var theta = latNumber * Math.PI / latitudeBands;
 	var sinTheta = Math.sin(theta);
@@ -63,13 +67,17 @@ function initBuffers() {
             var x = cosPhi * sinTheta;
             var y = cosTheta;
             var z = sinPhi * sinTheta;
-
+	    var u = 1 - (longNumber / longitudeBands);
+            var v = 1 - (latNumber / latitudeBands);
+ 
             normalData.push(x);
             normalData.push(y);
             normalData.push(z);
             vertexPositionData.push(radius * x);
             vertexPositionData.push(radius * y);
             vertexPositionData.push(radius * z);
+	    textureCoordData.push(u);
+            textureCoordData.push(v);
 	    // all are red for now
 	    // TODO - multiple colors, and color some balls white in the equator
 	    vertexColorData.push(1.0);
@@ -106,6 +114,12 @@ function initBuffers() {
     moonVertexPositionBuffer.itemSize = 3;
     moonVertexPositionBuffer.numItems = vertexPositionData.length / 3;
  
+    moonVertexTextureCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexTextureCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordData), gl.STATIC_DRAW);
+    moonVertexTextureCoordBuffer.itemSize = 2;
+    moonVertexTextureCoordBuffer.numItems = textureCoordData.length / 2;
+
     moonVertexColorBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexColorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexColorData), gl.STATIC_DRAW);
@@ -114,11 +128,10 @@ function initBuffers() {
     
     moonVertexIndexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
-    // FIXME - STREAM_DRAW?
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STREAM_DRAW);
     moonVertexIndexBuffer.itemSize = 1;
     moonVertexIndexBuffer.numItems = indexData.length;
-    */
+
     
     // table buffers
     squareVertexPositionBuffer = gl.createBuffer();
@@ -156,6 +169,29 @@ function initBuffers() {
     
 }
 
+function handleLoadedTexture(texture) {
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
+var moonTexture;
+function initTexture() {
+    moonTexture = gl.createTexture();
+    moonTexture.image = new Image();
+    moonTexture.image.onload = function() {
+	handleLoadedTexture(moonTexture);
+    };
+    moonTexture.image.src = "moon.gif";
+}
+ 
+
 var camera_angle_horiz = 30, camera_angle_vert = 10;
 
 
@@ -168,24 +204,40 @@ function drawScene() {
     var lightingDirection = Vector.create([-1.0, -1.0, -1.0]);
     var adjustedLD = lightingDirection.toUnitVector().x(-1);
     var flatLD = adjustedLD.flatten();
-    gl.uniform3f(
-        shaderProgram.lightingDirectionUniform,
-        flatLD[0], flatLD[1], flatLD[2]
-    );
+    gl.uniform3f(shaderProgram.lightingDirectionUniform,
+		 flatLD[0], flatLD[1], flatLD[2]);
     gl.uniform3f(shaderProgram.directionalColorUniform, 0.8, 0.8, 0.8);
 
     loadIdentity();
     // camera position
     mvTranslate([0.0, 0.0, -7.0]);
-    mvRotate(camera_angle_vert, [1, 0, 0]);
-    mvRotate(camera_angle_horiz, [0, 1, 0]);
+    //mvRotate(camera_angle_vert, [1, 0, 0]);
+    //mvRotate(camera_angle_horiz, [0, 1, 0]);
 
-    /*
     // draw the moon
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, moonTexture);
+    gl.uniform1i(shaderProgram.samplerUniform, 0);
+
+    console.log(moonVertexIndexBuffer, moonVertexColorBuffer,  moonVertexTextureCoordBuffer,
+	       moonVertexPositionBuffer, moonVertexNormalBuffer);
+
     gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
     gl.vertexAttribPointer(
 	shaderProgram.vertexPositionAttribute,
 	moonVertexPositionBuffer.itemSize,
+	gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexTextureCoordBuffer);
+    gl.vertexAttribPointer(
+	shaderProgram.textureCoordAttribute,
+	moonVertexTextureCoordBuffer.itemSize,
+	gl.FLOAT, false, 0, 0);
+ 
+    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexColorBuffer);
+    gl.vertexAttribPointer(
+	shaderProgram.vertexColorAttribute,
+	moonVertexColorBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
@@ -194,17 +246,11 @@ function drawScene() {
 	moonVertexNormalBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexColorBuffer);
-    gl.vertexAttribPointer(
-	shaderProgram.vertexColorAttribute,
-	moonVertexColorBuffer.itemSize,
-	gl.FLOAT, false, 0, 0);
-    
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
     setMatrixUniforms();
     gl.drawElements(gl.TRIANGLES, moonVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-     */
-    
+
+    /*    
     // draw the table    
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
     gl.vertexAttribPointer(
@@ -224,7 +270,7 @@ function drawScene() {
 
     setMatrixUniforms();
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, squareVertexPositionBuffer.numItems);
-
+     */
 }
 
 var currentlyPressedKeys = Object();
@@ -285,9 +331,9 @@ function animate() {
 
 
 function tick() {
-    handleKeys();
+    //handleKeys();
     drawScene();
-    animate();
+    //animate();
 }
 
 
@@ -385,9 +431,14 @@ function initShaders() {
 	shaderProgram, "aVertexColor");
     gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
 
+    shaderProgram.textureCoordAttribute = gl.getAttribLocation(
+	shaderProgram, "aTextureCoord");
+    gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+     
     shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
+    shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
     
     shaderProgram.ambientColorUniform =
 	gl.getUniformLocation(shaderProgram, "uAmbientColor");
