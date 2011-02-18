@@ -1,3 +1,15 @@
+/*
+ Графика
+  
+ TODO:
+ - сделать текстуры для всех шаров
+ - вращение шаров
+ - кий и нормальный стол
+ - освещение
+ - тени под шарами
+
+*/
+
 var shaderProgram;
 function initShaders() {
     var fragmentShader = getShader(gl, "shader-fs");
@@ -47,16 +59,21 @@ function initShaders() {
 }
 
 
+
+function create_ball_onload(ball) {
+    return function () {
+	handleLoadedTexture(ball.texture);
+    };
+};
+
 function initTextures() {
     for (var i = 0; i < balls.length; i++ ) {
 	var ball = balls[i];
 	ball.texture = gl.createTexture();
 	ball.texture.image = new Image();
-	ball.texture.image.onload = function() {
-	    handleLoadedTexture(ball.texture);
-	};
+	ball.texture.image.onload = create_ball_onload(ball);
 	ball.texture.image.src = "img/" + ball.img;
-    }
+    } 
 }
 
 
@@ -66,11 +83,11 @@ var tableVertexTextureCoordBuffer;
 var tableVertexIndexBuffer;
 var tableVertexColorBuffer;
 
-var moonVertexPositionBuffer;
-var moonVertexNormalBuffer;
-var moonVertexTextureCoordBuffer;
-var moonVertexIndexBuffer;
-var moonVertexColorBuffer;
+var ballVertexPositionBuffer;
+var ballVertexNormalBuffer;
+var ballVertexTextureCoordBuffer;
+var ballVertexIndexBuffer;
+var ballVertexColorBuffer;
 
 var radius = 0.1;
 
@@ -170,35 +187,35 @@ function initBuffers() {
       }
     }
  
-    moonVertexNormalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
+    ballVertexNormalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ballVertexNormalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normalData), gl.STATIC_DRAW);
-    moonVertexNormalBuffer.itemSize = 3;
-    moonVertexNormalBuffer.numItems = normalData.length / 3;
+    ballVertexNormalBuffer.itemSize = 3;
+    ballVertexNormalBuffer.numItems = normalData.length / 3;
 
-    moonVertexColorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexColorBuffer);
+    ballVertexColorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ballVertexColorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexColors), gl.STATIC_DRAW);
-    moonVertexColorBuffer.itemSize = 4;
-    moonVertexColorBuffer.numItems = vertexColors.length / 4;
+    ballVertexColorBuffer.itemSize = 4;
+    ballVertexColorBuffer.numItems = vertexColors.length / 4;
 
-    moonVertexTextureCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexTextureCoordBuffer);
+    ballVertexTextureCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ballVertexTextureCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordData), gl.STATIC_DRAW);
-    moonVertexTextureCoordBuffer.itemSize = 2;
-    moonVertexTextureCoordBuffer.numItems = textureCoordData.length / 2;
+    ballVertexTextureCoordBuffer.itemSize = 2;
+    ballVertexTextureCoordBuffer.numItems = textureCoordData.length / 2;
  
-    moonVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
+    ballVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ballVertexPositionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), gl.STATIC_DRAW);
-    moonVertexPositionBuffer.itemSize = 3;
-    moonVertexPositionBuffer.numItems = vertexPositionData.length / 3;
+    ballVertexPositionBuffer.itemSize = 3;
+    ballVertexPositionBuffer.numItems = vertexPositionData.length / 3;
  
-    moonVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
+    ballVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ballVertexIndexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STREAM_DRAW);
-    moonVertexIndexBuffer.itemSize = 1;
-    moonVertexIndexBuffer.numItems = indexData.length;
+    ballVertexIndexBuffer.itemSize = 1;
+    ballVertexIndexBuffer.numItems = indexData.length;
   }
 
 
@@ -249,41 +266,41 @@ function drawScene() {
     setMatrixUniforms();
     gl.drawElements(gl.TRIANGLES, tableVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 
-    // ball
+    // balls
     gl.uniform1i(shaderProgram.useTexturesUniform, true);
- 
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, ballVertexPositionBuffer);
     gl.vertexAttribPointer(
-	shaderProgram.vertexPositionAttribute, moonVertexPositionBuffer.itemSize,
+	shaderProgram.vertexPositionAttribute, ballVertexPositionBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
  
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexTextureCoordBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, ballVertexTextureCoordBuffer);
     gl.vertexAttribPointer(
-	shaderProgram.textureCoordAttribute, moonVertexTextureCoordBuffer.itemSize,
+	shaderProgram.textureCoordAttribute, ballVertexTextureCoordBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
  
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, ballVertexNormalBuffer);
     gl.vertexAttribPointer(
-	shaderProgram.vertexNormalAttribute, moonVertexNormalBuffer.itemSize,
+	shaderProgram.vertexNormalAttribute, ballVertexNormalBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexColorBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, ballVertexColorBuffer);
     gl.vertexAttribPointer(
-	shaderProgram.vertexColorAttribute, moonVertexColorBuffer.itemSize,
+	shaderProgram.vertexColorAttribute, ballVertexColorBuffer.itemSize,
 	gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ballVertexIndexBuffer);
     
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(shaderProgram.samplerUniform, 0);
 
     for(var i = 0; i < balls.length; i++ ) {
-	gl.activeTexture(gl.TEXTURE0);
 	gl.bindTexture(gl.TEXTURE_2D, balls[i].texture);
-	gl.uniform1i(shaderProgram.samplerUniform, 0);
 
 	mvPushMatrix();
 	mvTranslate([balls[i].x, radius, balls[i].y]);
 	setMatrixUniforms();
-	gl.drawElements(gl.TRIANGLES, moonVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	gl.drawElements(gl.TRIANGLES, ballVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 	mvPopMatrix();
     }
 }
