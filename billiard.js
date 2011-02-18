@@ -89,16 +89,15 @@ var ballVertexTextureCoordBuffer;
 var ballVertexIndexBuffer;
 var ballVertexColorBuffer;
 
-var radius = 0.1;
 
 function initBuffers() {
     tableVertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexPositionBuffer);
     var vertices = [
-       -2.0, 0.0, -3.0,
-        2.0, 0.0, -3.0,
-        2.0, 0.0,  3.0,
-       -2.0, 0.0,  3.0];
+       -table_x_size, 0.0, -table_y_size,
+        table_x_size, 0.0, -table_y_size,
+        table_x_size, 0.0,  table_y_size,
+       -table_x_size, 0.0,  table_y_size];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     tableVertexPositionBuffer.itemSize = 3;
     tableVertexPositionBuffer.numItems = 4;
