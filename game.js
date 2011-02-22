@@ -8,15 +8,19 @@
 
 
 var balls = [];
+var camera_radius = 3;
+var camera_angle_vert = 10, camera_angle_horiz = 30;
 
-var radius = 0.1;
+var radius = 0.1; // ball radius
 
+// game geometry
 var table_x_size = 3;
 var table_y_size = 2;
 var piramid_start = 1.4;
 var cue_start = -1.8;
 
 function create_balls() {
+    // initialize balls - assign initial positions and rotations
     // cue
     balls.push({x: cue_start, y: 1.5, x_rot: 0, y_rot: 0,
 		img: 'ball0.gif'});
@@ -40,8 +44,19 @@ function create_balls() {
 
 create_balls();
 
-// test animation
+var aiming = true;
 
+function handleShoot () {
+    // player pressed shoot button
+    if (!aiming)
+	return;
+    aiming = false;
+    var duration = assign_animations(balls, camera_angle_horiz, camera_angle_vert);
+    setTimeout(function () { aiming = true; }, duration * 1000);
+}
+
+// test animation
+/*
 balls[0].animation = [
     {x: balls[0].x,
      y: balls[0].y,
@@ -55,4 +70,4 @@ balls[0].animation = [
      vy: 0.01,
      duration: 3
     }
-];
+];*/

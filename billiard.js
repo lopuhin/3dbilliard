@@ -216,9 +216,6 @@ function initBuffers() {
   }
 
 
-var camera_angle_vert = 10, camera_angle_horiz = 30;
-var camera_radius = 3;
- 
 function drawScene() {
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -333,6 +330,9 @@ var camera_angle_shift = 0.5;
 var camera_radius_shift = 0.05;
 
 function handleKeys() {
+    if (currentlyPressedKeys[KeyEvent.DOM_VK_S]) {
+	handleShoot();
+    }
     if (currentlyPressedKeys[KeyEvent.DOM_VK_PAGE_UP]) {
 	camera_radius -= camera_radius_shift;
     }
@@ -340,20 +340,16 @@ function handleKeys() {
 	camera_radius += camera_radius_shift;
     }
     var sign = (camera_radius > 0) ? 1 : -1;
-    if (currentlyPressedKeys[37]) {
-	// Left cursor key
+    if (currentlyPressedKeys[KeyEvent.DOM_VK_LEFT]) {
 	camera_angle_horiz += sign * camera_angle_shift;
     }
-    if (currentlyPressedKeys[39]) {
-	// Right cursor key
+    if (currentlyPressedKeys[KeyEvent.DOM_VK_RIGHT]) {
 	camera_angle_horiz -= sign * camera_angle_shift;
     }
-    if (currentlyPressedKeys[38]) {
-	// Up cursor key
+    if (currentlyPressedKeys[KeyEvent.DOM_VK_UP]) {
 	camera_angle_vert += sign * camera_angle_shift;
     }
-    if (currentlyPressedKeys[40]) {
-	// Down cursor key
+    if (currentlyPressedKeys[KeyEvent.DOM_VK_DOWN]) {
 	camera_angle_vert -= sign * camera_angle_shift;
     }
 }

@@ -51,3 +51,10 @@ function update_position (ball) {
 	    },
 	   ball.animation);
 }
+
+
+function assign_animations () {
+    // calculate ball animations, return total animation duration
+
+    return 1.0;
+}
