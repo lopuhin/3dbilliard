@@ -7,7 +7,6 @@
  */
 
 
-var balls = [];
 var camera_radius = 3;
 var camera_angle_vert = 10, camera_angle_horiz = 30;
 
@@ -18,10 +17,13 @@ var table_x_size = 3;
 var table_y_size = 2;
 var piramid_start = 1.4;
 var cue_start = -1.8;
+var initial_speed = 0.1;
 
-function create_balls() {
+
+function create_balls(cue_start, piramid_start) {
     // initialize balls - assign initial positions and rotations
     // cue
+    var balls = [];
     balls.push({x: cue_start, y: 1.5, x_rot: 0, y_rot: 0,
 		img: 'ball0.gif'});
     // numbered balls
@@ -40,18 +42,35 @@ function create_balls() {
 	    n += 1;
 	}
     }
+    return balls;
 }
 
-create_balls();
+function create_borders(table_x_size, table_y_size) {
+    return [
+	[{x: -table_x_size, y: -table_y_size},
+	 {x: -table_x_size, y:  table_y_size}],
+	[{x: table_x_size, y: -table_y_size},
+	 {x: table_x_size, y:  table_y_size}],
+	[{x: table_x_size, y: -table_y_size},
+	 {x: table_x_size, y:  table_y_size}],
+	[{x: -table_x_size, y: -table_y_size},
+	 {x: -table_x_size, y:  table_y_size}]
+    ];
+}
+
+
+
+var balls = create_balls(cue_start, piramid_start);
+var borders = create_borders(table_x_size, table_y_size);
 
 var aiming = true;
 
-function handleShoot () {
+function handleShoot() {
     // player pressed shoot button
     if (!aiming)
 	return;
     aiming = false;
-    var duration = assign_animations(balls, camera_angle_horiz, camera_angle_vert);
+    var duration = assign_animations(balls, borders, camera_angle_horiz, initial_speed);
     setTimeout(function () { aiming = true; }, duration * 1000);
 }
 
