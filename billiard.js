@@ -2,8 +2,6 @@
  Графика
   
  TODO:
- - сделать текстуры для всех шаров
- - вращение шаров
  - кий и нормальный стол
  - освещение
  - тени под шарами
@@ -219,7 +217,7 @@ function initBuffers() {
 
 
 var camera_angle_vert = 10, camera_angle_horiz = 30;
-var camera_radius = 5;
+var camera_radius = 3;
  
 function drawScene() {
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -237,12 +235,16 @@ function drawScene() {
         shaderProgram.pointLightingColorUniform, 0.8, 0.8, 0.8);
  
     loadIdentity();
- 
+
+    var cue = balls[0];
+
     mvTranslate([0, 0, -camera_radius]);
-     
+    
     mvRotate(camera_angle_vert,  [1, 0, 0]);
     mvRotate(camera_angle_horiz, [0, 1, 0]);
 
+    mvTranslate([-cue.x, -radius * 5, -cue.y]);
+    
     // table
     gl.uniform1i(shaderProgram.useTexturesUniform, false);
     gl.bindBuffer(gl.ARRAY_BUFFER, tableVertexPositionBuffer);
@@ -293,15 +295,18 @@ function drawScene() {
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(shaderProgram.samplerUniform, 0);
 
-    for(var i = 0; i < balls.length; i++ ) {
-	gl.bindTexture(gl.TEXTURE_2D, balls[i].texture);
-
-	mvPushMatrix();
-	mvTranslate([balls[i].x, radius, balls[i].y]);
-	setMatrixUniforms();
-	gl.drawElements(gl.TRIANGLES, ballVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-	mvPopMatrix();
-    }
+    map(function (ball) {
+	    gl.bindTexture(gl.TEXTURE_2D, ball.texture);
+	    mvPushMatrix();
+	    mvTranslate([ball.x, radius, ball.y]);
+	    mvRotate(ball.x_rot, [1, 0, 0]);
+	    mvRotate(ball.y_rot, [0, 1, 0]);
+	    setMatrixUniforms();
+	    gl.drawElements(gl.TRIANGLES, ballVertexIndexBuffer.numItems,
+			    gl.UNSIGNED_SHORT, 0);
+	    mvPopMatrix();
+	},
+	balls);
 }
  
  
@@ -310,7 +315,7 @@ function animate() {
     var timeNow = new Date().getTime();
     if (lastTime != 0) {
 	var elapsed = timeNow - lastTime;
-	// TODO
+	map(update_position, balls);
     }
     lastTime = timeNow;
 }
@@ -334,21 +339,22 @@ function handleKeys() {
     if (currentlyPressedKeys[KeyEvent.DOM_VK_PAGE_DOWN]) {
 	camera_radius += camera_radius_shift;
     }
+    var sign = (camera_radius > 0) ? 1 : -1;
     if (currentlyPressedKeys[37]) {
 	// Left cursor key
-	camera_angle_horiz += camera_angle_shift;
+	camera_angle_horiz += sign * camera_angle_shift;
     }
     if (currentlyPressedKeys[39]) {
 	// Right cursor key
-	camera_angle_horiz -= camera_angle_shift;
+	camera_angle_horiz -= sign * camera_angle_shift;
     }
     if (currentlyPressedKeys[38]) {
 	// Up cursor key
-	camera_angle_vert += camera_angle_shift;
+	camera_angle_vert += sign * camera_angle_shift;
     }
     if (currentlyPressedKeys[40]) {
 	// Down cursor key
-	camera_angle_vert -= camera_angle_shift;
+	camera_angle_vert -= sign * camera_angle_shift;
     }
 }
     

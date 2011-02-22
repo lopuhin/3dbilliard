@@ -1,3 +1,21 @@
+function map(fn, lst) {
+    var res = [];
+    for (var i = 0; i < lst.length; i++ ) {
+	res.push(fn(lst[i], i));
+    }
+    return res;
+}
+
+
+function foreach(fn, lst) {
+    for (var i = 0; i < lst.length; i++ ) {
+	var res = fn(lst[i], i);
+	if (res == 'break')
+	    break;
+    }
+}
+
+
 var gl;
 function initGL(canvas) {
     try {
