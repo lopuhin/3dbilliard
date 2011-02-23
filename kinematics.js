@@ -48,11 +48,9 @@ function assign_animations(balls, borders, camera_angle_horiz, initial_speed) {
     var cue = balls[0];
     var cue_speed = vector_from_angle(initial_speed, to_radians(camera_angle_horiz - 90));
     cue.animation = [{x: cue.x, y: cue.y,
-		      vx: cue_speed.x, vy: cue_speed.y
-		      //duration: 1.0
-		     }];
+		      vx: cue_speed.x, vy: cue_speed.y}];
     next_intersection(balls, borders, 0, 0);
-    return 1.0;
+    return 1.0; // TODO
 }
 
 
@@ -90,22 +88,18 @@ function next_intersection(balls, borders, time, cnt) {
     if (intersection) {
 	var segment;
 	if (c_ball1.animation) {
-	    var last = c_ball1.animation[c_ball1.animation.length - 1];
-	    last.duration = intersection.t - time;
-	    segment = {x: intersection.point.x, y: intersection.point.y};
-	    if (c_border) {
-		var v_last = {x: last.vx, y: last.vy};
-		var v = rotate_vector(
-		    v_last, 2 * angle_between(v_last, intersection.normal) - Math.PI);
-		segment.vx = v.x;
-		segment.vy = v.y;
-	    }
+	    var last_segment = last(c_ball1.animation);
+	    last_segment.duration = intersection.t - time;
+	    segment = {x: intersection.point.x, y: intersection.point.y,
+		       vx: intersection.moving_ball_v.x,
+		       vy: intersection.moving_ball_v.y};
 	} else {
 	    c_ball1.animation = [];
 	    segment = {x: ball.x, y: ball.y};
 	}
 	console.log('new segment', segment);
 	c_ball1.animation.push(segment);
+	
 	if (cnt < 20) {
 	    next_intersection(balls, borders, intersection.t, cnt + 1);
 	}
@@ -115,12 +109,31 @@ function next_intersection(balls, borders, time, cnt) {
 // TODO
 
 function ball_intersection(moving_ball, another_ball, time) {
-    
+    return undefined;
+    var segment = last(moving_ball.animation);
+    if (another_ball.animation) {
+	var another_segment = current_segment(another_ball.animation, time);
+	// TODO
+    } else {
+	var v = {x: segment.vx, y: segment.vy};
+	var fn = function (t) {
+	    var ds = scale_vector(v, covered(vector_norm(v), t));
+	    return distance(add_vectors(segment, ds), another_ball) -
+		another_ball.radius - moving_ball.radius;
+	};
+	var t = newton_solve(fn, 0, 10);
+	console.log('solution', t);
+	if (t != undefined) {
+	    var ds = scale_vector(v, covered(vector_norm(v), t));
+	    return {point: add_vectors(segment, ds), t: time + t,
+		    moving_ball_v: v, another_ball_v: v}; // TODO
+	}
+    }
 }
 
 function border_intersection(moving_ball, border, time) {
     // return time delta, point and normal of intersection with border
-    var segment = moving_ball.animation[moving_ball.animation.length - 1];
+    var segment = last(moving_ball.animation);
     var border_vect = {x: border[1].x - border[0].x,
 		       y: border[1].y - border[0].y};
     var normal1 = scale_vector({x: border_vect.y, y: -border_vect.x}, moving_ball.radius);
@@ -142,13 +155,18 @@ function border_intersection(moving_ball, border, time) {
     var intersections = [];
     if (int1.x != undefined) {
 	var t1 = time_to_cover(v_module, distance(segment, int1));
-	intersections.push({point: int1, normal: normal, t: time + t1});
+	intersections.push({point: int1, t: time + t1});
     }
     if (int2.x != undefined) {
 	var t2 = time_to_cover(v_module, distance(segment, int2));
-	intersections.push({point: int2, normal: normal, t: time + t2});
+	intersections.push({point: int2, t: time + t2});
     }
-    return find_max(intersections, function (x) { return -x.t; }); 
+    if (intersections.length) {
+	var intersection = find_max(intersections, function (x) { return -x.t; });
+	intersection.moving_ball_v = rotate_vector(
+	    segment_v, 2 * angle_between(segment_v, normal) - Math.PI);
+	return intersection;
+    }
 }
 
 function line_intersection(segment, line) {
@@ -251,7 +269,7 @@ function find_max_index(lst, fn) {
 }
 
 
-function solve_newton(fn, start) {
+function newton_solve(fn, start, limit) {
     // Solve equation fn(x) == 0, starting from start, using Newton method
     var x = start;
     var delta = 0.0001;
@@ -262,11 +280,13 @@ function solve_newton(fn, start) {
 	dfdx = (fn(x + dx) - fnx) / dx;
 	x = x - fnx / dfdx;
 	fnx = fn(x);
+	if (Math.abs(x - start) > limit)
+	    return undefined;
     }
     return x;
 }
-solve_newton.test = function () {
-    console.log(solve_newton(function (x) {return x * x - 2;}, 1));
+newton_solve.test = function () {
+    console.log(solve_newton(function (x) {return x * x - 2;}, 1, 3));
 };
 
 

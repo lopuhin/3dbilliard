@@ -16,6 +16,11 @@ function foreach(fn, lst) {
 }
 
 
+function last(lst) {
+    return lst[lst.length - 1];
+}
+
+
 var gl;
 function initGL(canvas) {
     try {

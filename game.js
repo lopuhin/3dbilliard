@@ -22,8 +22,8 @@ var initial_speed = 2.5;
 
 function create_balls(cue_start, piramid_start) {
     // initialize balls - assign initial positions and rotations
-    // cue
     var balls = [];
+    // cue
     balls.push({x: cue_start, y: 1.5, radius: radius,
 		x_rot: 0, y_rot: 0,
 		img: 'ball0.gif'});
