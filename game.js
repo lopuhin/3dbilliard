@@ -17,14 +17,15 @@ var table_x_size = 3;
 var table_y_size = 2;
 var piramid_start = 1.4;
 var cue_start = -1.8;
-var initial_speed = 0.1;
+var initial_speed = 2.5;
 
 
 function create_balls(cue_start, piramid_start) {
     // initialize balls - assign initial positions and rotations
     // cue
     var balls = [];
-    balls.push({x: cue_start, y: 1.5, x_rot: 0, y_rot: 0,
+    balls.push({x: cue_start, y: 1.5, radius: radius,
+		x_rot: 0, y_rot: 0,
 		img: 'ball0.gif'});
     // numbered balls
     var r = radius * 1.01;
@@ -35,7 +36,7 @@ function create_balls(cue_start, piramid_start) {
 	for(var j = 0; j <= i; j++){
 	    var x = piramid_start + i*dx;
 	    var y = (i/2-j) * dy;
-	    balls.push({x: x, y: y,
+	    balls.push({x: x, y: y, radius: radius,
 			x_rot: Math.random() * 360,
 			y_rot: Math.random() * 360,
 			img: 'ball' + (parseInt(Math.random() * 15) + 1) +'.gif'});
@@ -52,9 +53,9 @@ function create_borders(table_x_size, table_y_size) {
 	[{x: table_x_size, y: -table_y_size},
 	 {x: table_x_size, y:  table_y_size}],
 	[{x: table_x_size, y: -table_y_size},
-	 {x: table_x_size, y:  table_y_size}],
-	[{x: -table_x_size, y: -table_y_size},
-	 {x: -table_x_size, y:  table_y_size}]
+	 {x: -table_x_size, y: -table_y_size}],
+	[{x: table_x_size, y: table_y_size},
+	 {x: -table_x_size, y: table_y_size}]
     ];
 }
 

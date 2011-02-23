@@ -25,10 +25,11 @@ function update_position (ball) {
 			return 'continue';
 		    }
 		    // update ball position
-		    // FIXME - only if covered is linear by v
 		    var dt = now - segment.start;
-		    ball.x += covered(segment.vx, dt);
-		    ball.y += covered(segment.vy, dt);
+		    var v = {x: segment.vx, y: segment.vy};
+		    var ds = scale_vector(v, covered(vector_norm(v), dt));
+		    ball.x = segment.x + ds.x;
+		    ball.y = segment.y + ds.y;
 		} else { // just starting the segment
 		    segment.start = now;
 		    ball.x = segment.x;
@@ -66,7 +67,7 @@ function next_intersection(balls, borders, time) {
 		foreach(function (another_ball) {
 			    if (moving_ball != another_ball) {
 				var x = ball_intersection(moving_ball, another_ball, time);
-				if (!intersection || x.t < intersection.t) {
+				if (x && (!intersection || x.t < intersection.t)) {
 				    intersection = x;
 				    c_ball1 = moving_ball;
 				    c_ball2 = another_ball;
@@ -75,15 +76,39 @@ function next_intersection(balls, borders, time) {
 		    }, balls);
 		foreach(function (border) {
 			    var x = border_intersection(moving_ball, border, time);
-			    if (!intersection || x.t < intersection.t) {
+			    if (x && (!intersection || x.t < intersection.t)) {
 				intersection = x;
 				c_ball1 = moving_ball;
+				c_ball2 = undefined;
 				c_border = border;
 			    }
 			}, borders);
 	    }
 	}, balls);
-    console.log(intersection);
+    console.log('final', intersection);
+    if (intersection) {
+	var segment;
+	if (c_ball1.animation) {
+	    var last = c_ball1.animation[c_ball1.animation.length - 1];
+	    last.duration = intersection.t - time;
+	    segment = {x: intersection.point.x, y: intersection.point.y};
+	    if (c_border) {
+		var v_last = {x: last.vx, y: last.vy};
+		console.log(angle_between(v_last, intersection.normal), v_last,
+			    intersection.normal);
+		var v = rotate_vector(
+		    v_last, 2 * angle_between(v_last, intersection.normal) - Math.PI);
+		segment.vx = v.x;
+		segment.vy = v.y;
+	    }
+	} else {
+	    c_ball1.animation = [];
+	    segment = {x: ball.x, y: ball.y};
+	}
+	console.log('new segment', segment);
+	c_ball1.animation.push(segment);
+    }
+
 }
 
 // TODO
@@ -96,23 +121,36 @@ function border_intersection(moving_ball, border, time) {
     // return time delta, point and normal of intersection with border
     var segment = current_segment(moving_ball.animation, time);
     console.log('segment', segment);
+    console.log('border', border);
     var border_vect = {x: border[1].x - border[0].x,
 		       y: border[1].y - border[0].y};
-    var normal1 = scale_vector({x: -border_vect.y, y: border_vect.x}, 1);
+    console.log(moving_ball.radius);
+    var normal1 = scale_vector({x: border_vect.y, y: -border_vect.x}, moving_ball.radius);
     var normal2 = mult_vector(normal1, -1);
     var line1 = [add_vectors(border[0], normal1),
 		 add_vectors(border[1], normal1)];
     var line2 = [add_vectors(border[0], normal2),
 		 add_vectors(border[1], normal2)];
-    // TODO - edgese intersection
+    // TODO - edges intersection
     var int1 = line_intersection(segment, line1);
     var int2 = line_intersection(segment, line2);
-    var v_module = Math.sqrt(segment.vx * segment.vx + segment.vy * segment.vy);
-    var t1 = time_to_cover(v_module, distance(segment, int1));
-    var t2 = time_to_cover(v_module, distance(segment, int2));
-    return find_max([{point: int1, normal: normal1, t: t1},
-		     {point: int2, normal: normal2, t: t2}],
-		    function (x) { return x.t; }); 
+    var segment_v = {x: segment.vx, y: segment.vy};
+    var v_module = vector_norm(segment_v);
+    var normal = normal1;
+    var angle = angle_between(segment_v, normal);
+    if (segment_v.x * normal.x + segment_v.y * normal.y > 0) {
+	normal = normal2;
+    }
+    var intersections = [];
+    if (int1.x != undefined) {
+	var t1 = time_to_cover(v_module, distance(segment, int1));
+	intersections.push({point: int1, normal: normal, t: t1});
+    }
+    if (int2.x != undefined) {
+	var t2 = time_to_cover(v_module, distance(segment, int2));
+	intersections.push({point: int2, normal: normal, t: t2});	
+    }
+    return find_max(intersections, function (x) { return x.t; }); 
 }
 
 function line_intersection(segment, line) {
@@ -122,11 +160,11 @@ function line_intersection(segment, line) {
     var b = {x: line[1].x - line[0].x, y: line[1].y - line[0].y};
     var b0 = {x: line[0].x, y: line[0].y};
     var solution = gauss_solve(
-	[[a.x, b.x],
-	 [a.y, b.y]],
+	[[a.x, -b.x],
+	 [a.y, -b.y]],
 	[b0.x - a0.x,
 	 b0.y - a0.y]);
-    if (solution[1] < 1.0 && solution[1] > 0.0) { // it lies inside line
+    if (solution[0] > 0 && solution[1] < 1.0 && solution[1] > 0.0) { // it lies inside line
 	return add_vectors(a0, mult_vector(a, solution[0]));
     }
     return {};
@@ -173,15 +211,15 @@ function gauss_solve(matrix, vector) {
 	}
 	answer.push(undefined);
     }
-    console.log(matrix, vector);
     for (var i = N - 1; i >= 0; i-- ) {
 	for (var j = 0; j < N; j++ ) {
 	    if (Math.abs(matrix[i][j]) > 0 && answer[j] == undefined) {
 		var s = 0;
-		for (var k = 0; k < N && k != j; k++ ) {
+		for (var k = 0; k < N && answer[k] != undefined; k++ ) {
 		    s += matrix[i][k] * answer[k];
 		}
 		answer[j] = (vector[i] - s) / matrix[i][j];
+		break;
 	    }
 	}
     }
@@ -189,20 +227,17 @@ function gauss_solve(matrix, vector) {
 }
 gauss_solve.test = function () {
     console.log(gauss_solve(
-		[[1, 3, 4],
-		 [2, 3, 12],
-		 [3, 2, 1]], [8, 17, 6]));
+		    [[1, -3, 4],
+		     [-2, 3, 12],
+		     [3, 2, -1]], [2, 13, 4]));
+    console.log(gauss_solve(
+		    [[1, -1],
+		     [1, 2]], [2, 4]));
 };
 
+
 function find_max(lst, fn) {
-    fn = fn || function (x) { return x; };
-    var m, c;
-    for (var i = 0; i < lst.length; i++ ) {
-	c = fn(lst[i]);
-	if (m == undefined || c > m)
-	    m = c;
-    }
-    return m;
+    return lst[find_max_index(lst, fn)];
 }
 
 function find_max_index(lst, fn) {
@@ -217,34 +252,6 @@ function find_max_index(lst, fn) {
     return index;
 }
 
-function scale_vector(v, new_norm) {
-    var coef = new_norm / Math.sqrt(v.x*v.x + v.y*v.y);
-    return mult_vector(v, coef);
-}
-
-function mult_vector(v, coef) {
-    return {x: v.x * coef, y: v.y * coef};
-}
-
-function vector_from_angle(module, angle) {
-    return {x: module * Math.cos(angle),
-	    y: module * Math.sin(angle)};
-}
-
-function add_vectors(v1, v2) {
-    return {x: v1.x + v2.x,
-	    y: v1.y + v2.y};
-}
-
-function distance(a, b) {
-    var dx = (a.x - b.x);
-    var dy = (a.y - b.y);
-    return Math.sqrt(dx * dx + dy * dy);
-}
-
-function to_radians(angle) {
-    return Math.PI * angle / 180;
-}
 
 function solve_newton(fn, start) {
     // Solve equation fn(x) == 0, starting from start, using Newton method
@@ -263,5 +270,52 @@ function solve_newton(fn, start) {
 solve_newton.test = function () {
     console.log(solve_newton(function (x) {return x * x - 2;}, 1));
 };
+
+
+// 2d vectors
+
+function rotate_vector(v, angle) {
+    var ca = Math.cos(angle);
+    var sa = Math.sin(angle);
+    return {x: v.x*ca - v.y*sa,
+	    y: v.x*sa + v.y*ca};
+}
+
+function angle_between(v1, v2) {
+    v1 = scale_vector(v1, 1);
+    v2 = scale_vector(v2, 1);
+    return Math.atan2(v2.y, v2.x) - Math.atan2(v1.y, v1.x);
+}
+
+function vector_norm(v) {
+    return Math.sqrt(v.x * v.x + v.y * v.y);
+}
+
+function scale_vector(v, new_norm) {
+    var coef = new_norm / vector_norm(v);
+    return mult_vector(v, coef);
+}
+
+function mult_vector(v, coef) {
+    return {x: v.x * coef, y: v.y * coef};
+}
+
+function vector_from_angle(module, angle) {
+    return {x: module * Math.cos(angle),
+	    y: module * Math.sin(angle)};
+}
+
+function add_vectors(v1, v2) {
+    return {x: v1.x + v2.x,
+	    y: v1.y + v2.y};
+}
+
+function distance(a, b) {
+    return vector_norm({x: a.x - b.x, y: a.y - b.y});
+}
+
+function to_radians(angle) {
+    return Math.PI * angle / 180;
+}
 
 
