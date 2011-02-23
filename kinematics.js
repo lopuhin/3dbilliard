@@ -86,34 +86,45 @@ function next_intersection(balls, borders, time, cnt) {
 	}, balls);
     console.log('final', intersection);
     if (intersection) {
-	var segment;
-	if (c_ball1.animation) {
-	    var last_segment = last(c_ball1.animation);
-	    last_segment.duration = intersection.t - time;
-	    segment = {x: intersection.point.x, y: intersection.point.y,
+	var last_segment = last(c_ball1.animation);
+	last_segment.duration = intersection.t - time;
+	var segment = {x: intersection.point.x, y: intersection.point.y,
 		       vx: intersection.moving_ball_v.x,
 		       vy: intersection.moving_ball_v.y};
-	} else {
-	    c_ball1.animation = [];
-	    segment = {x: ball.x, y: ball.y};
+	if (c_ball2) {
+	    var last_pos;
+	    if (c_ball2.animation) {
+		var s = last(c_ball2.animation);
+		s.duration = intersection.t - time;
+		var v = {x: s.vx, y: s.vy};
+		var ds = scale_vector(v, covered(vector_norm(v), s.duration));
+		last_pos = add_vectors(s, ds);
+	    } else {
+		// add still animation
+		c_ball2.animation = [{x: c_ball2.x, y: c_ball2.y,
+				      vx: 0, vy: 0, duration: intersection.t}];
+		last_pos = {x: c_ball2.x, y: c_ball2.y};
+	    }
+	    c_ball2.animation.push(
+		{x: last_pos.x, y: last_pos.y,
+		 vx: intersection.another_ball_v.x,
+		 vy: intersection.another_ball_v.y});
 	}
 	console.log('new segment', segment);
 	c_ball1.animation.push(segment);
-	
+	/*	
 	if (cnt < 20) {
 	    next_intersection(balls, borders, intersection.t, cnt + 1);
-	}
+	 }*/
     }
 }
 
-// TODO
 
 function ball_intersection(moving_ball, another_ball, time) {
-    return undefined;
     var segment = last(moving_ball.animation);
     if (another_ball.animation) {
 	var another_segment = current_segment(another_ball.animation, time);
-	// TODO
+	// TODO - make common case
     } else {
 	var v = {x: segment.vx, y: segment.vy};
 	var fn = function (t) {
@@ -125,10 +136,24 @@ function ball_intersection(moving_ball, another_ball, time) {
 	console.log('solution', t);
 	if (t != undefined) {
 	    var ds = scale_vector(v, covered(vector_norm(v), t));
-	    return {point: add_vectors(segment, ds), t: time + t,
-		    moving_ball_v: v, another_ball_v: v}; // TODO
+	    var pos1 = add_vectors(segment, ds);
+	    var v1v2 = ball_collision(
+		v, pos1,
+		{x: 0, y: 0}, {x: another_ball.x, y: another_ball.y});
+	    return {point: pos1, t: time + t,
+		    moving_ball_v: v1v2[0], another_ball_v: v1v2[1]};
 	}
     }
+}
+
+function ball_collision (v1, pos1, v2, pos2) {
+    // return speeds of balls after collision
+    var ds = scale_vector({x: pos2.x - pos1.x, y: pos2.y - pos1.y}, 1);
+    var angle = Math.atan2(ds.y, ds.x);
+    v1 = rotate_vector(v1, angle);
+    v2 = rotate_vector(v2, angle);
+    // now ceners of balls are aligned with x axis
+    return [v1, v1]; // TODO
 }
 
 function border_intersection(moving_ball, border, time) {
@@ -310,8 +335,12 @@ function vector_norm(v) {
 }
 
 function scale_vector(v, new_norm) {
-    var coef = new_norm / vector_norm(v);
-    return mult_vector(v, coef);
+    var n = vector_norm(v);
+    if (n > 0) {
+	var coef = new_norm / n;
+	return mult_vector(v, coef);
+    }
+    return v;
 }
 
 function mult_vector(v, coef) {

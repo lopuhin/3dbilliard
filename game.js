@@ -81,13 +81,28 @@ balls[0].animation = [
     {x: balls[0].x,
      y: balls[0].y,
      vx: 0.01, vy: 0.01,
-     duration: 2
+     duration: 1
     
     },
     {x: 2,
      y: 3,
-     vx: -0.01,
-     vy: 0.01,
+     vx: -1,
+     vy: 1,
+     duration: 3
+    }
+];
+
+balls[1].animation = [
+    {x: balls[1].x,
+     y: balls[1].y,
+     vx: 0, vy: 0,
+     duration: 1
+    
+    },
+    {x: balls[1].x,
+     y: balls[1].y,
+     vx: -1,
+     vy: 1,
      duration: 3
     }
 ];*/
