@@ -51,15 +51,16 @@ function assign_animations(balls, borders, camera_angle_horiz, initial_speed) {
 		      vx: cue_speed.x, vy: cue_speed.y
 		      //duration: 1.0
 		     }];
-    next_intersection(balls, borders, 0);
+    next_intersection(balls, borders, 0, 0);
     return 1.0;
 }
 
 
-function next_intersection(balls, borders, time) {
+function next_intersection(balls, borders, time, cnt) {
     // find first intersection of any of moving balls, starting with @time
     // update animation segment, and call itself recurcively to find the next intersection
     var intersection, c_ball1, c_ball2, c_border;
+    console.log(balls, time);
     foreach(
 	function (moving_ball) {
 	    if (moving_ball.animation &&
@@ -94,8 +95,6 @@ function next_intersection(balls, borders, time) {
 	    segment = {x: intersection.point.x, y: intersection.point.y};
 	    if (c_border) {
 		var v_last = {x: last.vx, y: last.vy};
-		console.log(angle_between(v_last, intersection.normal), v_last,
-			    intersection.normal);
 		var v = rotate_vector(
 		    v_last, 2 * angle_between(v_last, intersection.normal) - Math.PI);
 		segment.vx = v.x;
@@ -107,8 +106,10 @@ function next_intersection(balls, borders, time) {
 	}
 	console.log('new segment', segment);
 	c_ball1.animation.push(segment);
+	if (cnt < 20) {
+	    next_intersection(balls, borders, intersection.t, cnt + 1);
+	}
     }
-
 }
 
 // TODO
@@ -119,12 +120,9 @@ function ball_intersection(moving_ball, another_ball, time) {
 
 function border_intersection(moving_ball, border, time) {
     // return time delta, point and normal of intersection with border
-    var segment = current_segment(moving_ball.animation, time);
-    console.log('segment', segment);
-    console.log('border', border);
+    var segment = moving_ball.animation[moving_ball.animation.length - 1];
     var border_vect = {x: border[1].x - border[0].x,
 		       y: border[1].y - border[0].y};
-    console.log(moving_ball.radius);
     var normal1 = scale_vector({x: border_vect.y, y: -border_vect.x}, moving_ball.radius);
     var normal2 = mult_vector(normal1, -1);
     var line1 = [add_vectors(border[0], normal1),
@@ -144,13 +142,13 @@ function border_intersection(moving_ball, border, time) {
     var intersections = [];
     if (int1.x != undefined) {
 	var t1 = time_to_cover(v_module, distance(segment, int1));
-	intersections.push({point: int1, normal: normal, t: t1});
+	intersections.push({point: int1, normal: normal, t: time + t1});
     }
     if (int2.x != undefined) {
 	var t2 = time_to_cover(v_module, distance(segment, int2));
-	intersections.push({point: int2, normal: normal, t: t2});	
+	intersections.push({point: int2, normal: normal, t: time + t2});
     }
-    return find_max(intersections, function (x) { return x.t; }); 
+    return find_max(intersections, function (x) { return -x.t; }); 
 }
 
 function line_intersection(segment, line) {
