@@ -5,7 +5,7 @@
  - кий и нормальный стол
  - освещение
  - тени под шарами
-
+ - не грузить процессор при отсутствии анимации  
 */
 
 var shaderProgram;
@@ -233,14 +233,10 @@ function drawScene() {
  
     loadIdentity();
 
-    var cue = balls[0];
-
     mvTranslate([0, 0, -camera_radius]);
-    
     mvRotate(camera_angle_vert,  [1, 0, 0]);
     mvRotate(camera_angle_horiz, [0, 1, 0]);
-
-    mvTranslate([-cue.x, -radius * 5, -cue.y]);
+    mvTranslate([-camera_center.x, -radius * 5, -camera_center.y]);
     
     // table
     gl.uniform1i(shaderProgram.useTexturesUniform, false);

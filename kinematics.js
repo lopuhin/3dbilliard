@@ -50,7 +50,17 @@ function assign_animations(balls, borders, camera_angle_horiz, initial_speed) {
     cue.animation = [{x: cue.x, y: cue.y,
 		      vx: cue_speed.x, vy: cue_speed.y}];
     next_intersection(balls, borders, 0, 0);
-    return 1.0; // TODO
+    return find_max(
+	map(function (ball) {
+		var total_duration = 0;
+		if (ball.animation) {
+		    foreach(function (segment) {
+				if (segment.duration)
+				    total_duration += segment.duration;
+			    }, ball.animation);
+		}
+		return total_duration;
+	    }, balls));
 }
 
 
@@ -112,10 +122,10 @@ function next_intersection(balls, borders, time, cnt) {
 	}
 	console.log('new segment', segment);
 	c_ball1.animation.push(segment);
-	/*	
-	if (cnt < 20) {
+		
+	if (cnt < 1000) {
 	    next_intersection(balls, borders, intersection.t, cnt + 1);
-	 }*/
+	}
     }
 }
 
@@ -132,9 +142,9 @@ function ball_intersection(moving_ball, another_ball, time) {
 	    return distance(add_vectors(segment, ds), another_ball) -
 		another_ball.radius - moving_ball.radius;
 	};
-	var t = newton_solve(fn, 0, 10);
+	var t = newton_solve(fn, 0, 10); // FIXME - calc limit
 	console.log('solution', t);
-	if (t != undefined) {
+	if (t != undefined && t >= 0) {
 	    var ds = scale_vector(v, covered(vector_norm(v), t));
 	    var pos1 = add_vectors(segment, ds);
 	    var v1v2 = ball_collision(
@@ -153,7 +163,11 @@ function ball_collision (v1, pos1, v2, pos2) {
     v1 = rotate_vector(v1, angle);
     v2 = rotate_vector(v2, angle);
     // now ceners of balls are aligned with x axis
-    return [v1, v1]; // TODO
+    var new_v1 = {x: v2.x, y: v1.y};
+    var new_v2 = {x: v1.x, y: v2.y};
+    // rotate them back
+    return [rotate_vector(new_v1, -angle),
+	    rotate_vector(new_v2, -angle)];
 }
 
 function border_intersection(moving_ball, border, time) {
@@ -282,6 +296,7 @@ function find_max(lst, fn) {
 }
 
 function find_max_index(lst, fn) {
+    fn = fn || function (x) { return x; };
     var m, c, index;
     for (var i = 0; i < lst.length; i++ ) {
 	c = fn(lst[i]);

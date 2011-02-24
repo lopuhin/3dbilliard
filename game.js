@@ -7,6 +7,7 @@
  */
 
 
+var camera_center;
 var camera_radius = 3;
 var camera_angle_vert = 10, camera_angle_horiz = 30;
 
@@ -28,7 +29,7 @@ function create_balls(cue_start, piramid_start) {
 		x_rot: 0, y_rot: 0,
 		img: 'ball0.gif'});
     // numbered balls
-    var r = radius * 1.01;
+    var r = radius * 1.05;
     var dy = 2 * r;
     var dx = 2 * r * Math.cos( Math.PI / 6);
     var n = 1;
@@ -63,6 +64,7 @@ function create_borders(table_x_size, table_y_size) {
 
 var balls = create_balls(cue_start, piramid_start);
 var borders = create_borders(table_x_size, table_y_size);
+camera_center = {x: balls[0].x, y: balls[0].y};
 
 var aiming = true;
 
@@ -72,7 +74,12 @@ function handleShoot() {
 	return;
     aiming = false;
     var duration = assign_animations(balls, borders, camera_angle_horiz, initial_speed);
-    setTimeout(function () { aiming = true; }, duration * 1000);
+    setTimeout(
+	function () {
+	    aiming = true;
+	    camera_center = {x: balls[0].x, y: balls[0].y};
+	},
+	duration * 1000);
 }
 
 // test animation
