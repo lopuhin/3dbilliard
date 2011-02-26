@@ -78,6 +78,7 @@ function handleShoot() {
 	function () {
 	    aiming = true;
 	    camera_center = {x: balls[0].x, y: balls[0].y};
+	    foreach(function(ball) { ball.animation = undefined; }, balls);
 	},
 	duration * 1000);
 }

@@ -17,7 +17,7 @@ function time_to_cover(v0, distance) {
 
 function time_to_stop(v0) {
     // time till the ball stops completly
-    var almost_zero_v = 0.01;
+    var almost_zero_v = 0.05;
     if (v0 <= almost_zero_v)
 	return 0;
     return - Math.log(almost_zero_v / v0) / friction_coef;
@@ -160,30 +160,50 @@ function next_intersection(balls, borders, time) {
 
 function ball_intersection(moving_ball, another_ball, time) {
     var segment = last(moving_ball.animation);
+    var fn;
+    var v = {x: segment.vx, y: segment.vy};
+    var another_v = {x: 0, y: 0};
+    var another_pos = {x: another_ball.x, y: another_ball.y};
     if (another_ball.animation) {
 	var another_segment = current_segment(another_ball.animation, time);
-	// TODO - make common case
-    } else {
-	var v = {x: segment.vx, y: segment.vy};
-	var fn = function (t) {
+	if (another_segment) {
+	    another_v = {x: another_segment.vx, y: another_segment.vy};
+	    another_pos = another_segment;
+	    fn = function (t) {
+		var ds1 = scale_vector(v, covered_distance(vector_norm(v), t));
+		var ds2 = scale_vector(another_v,
+				       covered_distance(vector_norm(another_v), t));
+		return distance(add_vectors(segment, ds1),
+				add_vectors(another_segment, ds2)) -
+		    another_ball.radius - moving_ball.radius;
+	    };
+	} else {
+	    another_pos = last(another_ball.animation);
+	}
+    }
+    if (!fn) {
+	fn = function (t) {
 	    var ds = scale_vector(v, covered_distance(vector_norm(v), t));
 	    return distance(add_vectors(segment, ds), another_ball) -
 		another_ball.radius - moving_ball.radius;
 	};
-	var t = newton_solve(fn, 0, 100); // FIXME - calc limit
-	if (t != undefined && t >= 0) {
-	    var ds = scale_vector(v, covered_distance(vector_norm(v), t));
-	    var pos1 = add_vectors(segment, ds);
-	    var v1v2 = ball_collision(
-		v, pos1,
-		{x: 0, y: 0}, {x: another_ball.x, y: another_ball.y});
-	    return {point: pos1, t: time + t,
-		    moving_ball_v: v1v2[0], another_ball_v: v1v2[1]};
-	}
+    }
+    var t = newton_solve(fn, 0, 100); // FIXME - calc limit
+    if (t != undefined && t >= 0) {
+	var ds1 = scale_vector(v, covered_distance(vector_norm(v), t));
+	var pos1 = add_vectors(segment, ds1);
+	var ds2 = scale_vector(another_v,
+			       covered_distance(vector_norm(another_v), t));
+	var pos2 = add_vectors(another_pos, ds2);
+	v = scale_vector(v, updated_speed(vector_norm(v), t));
+	another_v = scale_vector(another_v, updated_speed(vector_norm(another_v), t));
+	var v1v2 = ball_collision(v, pos1, another_v, pos2);
+	return {point: pos1, t: time + t,
+		moving_ball_v: v1v2[0], another_ball_v: v1v2[1]};
     }
 }
 
-function ball_collision (v1, pos1, v2, pos2) {
+function ball_collision(v1, pos1, v2, pos2) {
     // return speeds of balls after collision
     var ds = scale_vector({x: pos2.x - pos1.x, y: pos2.y - pos1.y}, 1);
     var angle = Math.atan2(ds.y, ds.x);
