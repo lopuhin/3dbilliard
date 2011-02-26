@@ -18,7 +18,7 @@ var table_x_size = 3;
 var table_y_size = 2;
 var piramid_start = 1.4;
 var cue_start = -1.8;
-var initial_speed = 2.5;
+var initial_speed = 4.0;
 
 
 function create_balls(cue_start, piramid_start) {

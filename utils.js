@@ -21,6 +21,15 @@ function last(lst) {
 }
 
 
+function any(fn, lst) {
+    for (var i = 0; i < lst.length; i++) {
+	if (fn(lst[i]))
+	    return true;
+    }
+    return false;
+}
+
+
 var gl;
 function initGL(canvas) {
     try {
