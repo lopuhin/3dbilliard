@@ -29,6 +29,13 @@ function any(fn, lst) {
     return false;
 }
 
+function in_list(lst, el) {
+    return any(function (x) { return x == el; }, lst);
+}
+
+
+// OpenGL utils
+
 
 var gl;
 function initGL(canvas) {

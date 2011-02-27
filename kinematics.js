@@ -79,7 +79,7 @@ function assign_animations(balls, borders, camera_angle_horiz, initial_speed) {
 }
 
 // TODO - split
-function next_intersection(balls, borders, time) {
+function next_intersection(balls, borders, time, prev_ball_pair) {
     // find first intersection of any of moving balls, starting with @time
     // update animation segment, and call itself recurcively to find the next intersection
     var eps = 0.000001;
@@ -89,7 +89,11 @@ function next_intersection(balls, borders, time) {
 	function (moving_ball) {
 	    if (moving_ball.animation && !last(moving_ball.animation).duration) {
 		foreach(function (another_ball) {
-			    if (moving_ball != another_ball) {
+			    // balls just collided can not collide again
+			    if (moving_ball != another_ball && (
+				!prev_ball_pair || !(
+				    in_list(prev_ball_pair, moving_ball) &&
+   					in_list(prev_ball_pair, another_ball)))) {
 				var x = ball_intersection(moving_ball, another_ball, time);
 				if (x && (!intersection || x.t < intersection.t) &&
 				   x.t - time > eps) {
@@ -103,7 +107,6 @@ function next_intersection(balls, borders, time) {
 			    var x = border_intersection(moving_ball, border, time);
 			    if (x && (!intersection || x.t < intersection.t) &&
 				x.t - time > eps) {
-				console.log('border intersection', x);
 				intersection = x;
 				c_ball1 = moving_ball;
 				c_ball2 = undefined;
@@ -148,7 +151,10 @@ function next_intersection(balls, borders, time) {
 	if (any(function (ball) {
 		return ball.animation && ! last(ball.animation).duration;
 		}, balls)) {
-	    next_intersection(balls, borders, intersection.t);
+	    prev_ball_pair = undefined;
+	    if (c_ball1 && c_ball2)
+		prev_ball_pair = [c_ball1, c_ball2];
+	    next_intersection(balls, borders, intersection.t, prev_ball_pair);
 	}
     }
 }
@@ -185,7 +191,7 @@ function ball_intersection(moving_ball, another_ball, time) {
 	};
     }
     var t = newton_solve(fn, 0, 100); // FIXME - calc limit
-    if (t != undefined && t >= 0) {
+    if (t != undefined && t >= 1e-8) {
 	var ds1 = scale_vector(v, covered_distance(vector_norm(v), t));
 	var pos1 = add_vectors(segment, ds1);
 	var ds2 = scale_vector(another_v,
@@ -281,6 +287,7 @@ function current_segment(animation, time) {
 		if (s.duration)
 		    t += s.duration;
 		if (t >= time) {
+		    console.log('current_segment', t, time);
 		    current = s;
 		    return 'break';
 		}
@@ -341,7 +348,7 @@ gauss_solve.test = function () {
 		     [-2.220e-10, -4]],
 		    [-1.0999999999999999, -4.135085296108588]));
 };
-gauss_solve.test();
+
 
 function find_max(lst, fn) {
     return lst[find_max_index(lst, fn)];
@@ -378,6 +385,7 @@ function newton_solve(fn, start, limit) {
 	if (iter_limit < 0 || x < 0 || Math.abs(x - start) > limit)
 	    return undefined;
     }
+    console.log(x, fn(x - delta), fn(x), fn(x + delta));
     return x;
 }
 newton_solve.test = function () {
