@@ -44,7 +44,7 @@ function create_balls(cue_start, piramid_start) {
 	    n += 1;
 	}
     }
-    return balls;
+    return [balls[0], balls[1]];
 }
 
 function create_borders(table_x_size, table_y_size) {
@@ -73,12 +73,12 @@ function handleShoot() {
     if (!aiming)
 	return;
     aiming = false;
+    foreach(function(ball) { ball.animation = undefined; }, balls);
     var duration = assign_animations(balls, borders, camera_angle_horiz, initial_speed);
     setTimeout(
 	function () {
 	    aiming = true;
 	    camera_center = {x: balls[0].x, y: balls[0].y};
-	    foreach(function(ball) { ball.animation = undefined; }, balls);
 	},
 	duration * 1000);
 }

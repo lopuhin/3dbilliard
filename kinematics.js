@@ -24,7 +24,7 @@ function time_to_stop(v0) {
 }
 
 
-function update_position (ball) {
+function update_position(ball) {
     // update ball position if it is moving, using ball.animation -
     // an array of animation segments
     if (!ball.animation)
@@ -103,6 +103,7 @@ function next_intersection(balls, borders, time) {
 			    var x = border_intersection(moving_ball, border, time);
 			    if (x && (!intersection || x.t < intersection.t) &&
 				x.t - time > eps) {
+				console.log('border intersection', x);
 				intersection = x;
 				c_ball1 = moving_ball;
 				c_ball2 = undefined;
@@ -129,21 +130,16 @@ function next_intersection(balls, borders, time) {
 			   vx: intersection.moving_ball_v.x,
 			   vy: intersection.moving_ball_v.y};
 	    if (c_ball2) {
-		var last_pos;
 		if (c_ball2.animation) {
 		    var s = last(c_ball2.animation);
 		    s.duration = intersection.t - time;
-		    var v = {x: s.vx, y: s.vy};
-		    var ds = scale_vector(v, covered_distance(vector_norm(v), s.duration));
-		    last_pos = add_vectors(s, ds);
-		} else {
-		    // add still animation
+		} else { // add still animation
 		    c_ball2.animation = [{x: c_ball2.x, y: c_ball2.y,
 					  vx: 0, vy: 0, duration: intersection.t}];
-		    last_pos = {x: c_ball2.x, y: c_ball2.y};
 		}
 		c_ball2.animation.push(
-		    {x: last_pos.x, y: last_pos.y,
+		    {x: intersection.another_point.x,
+		     y: intersection.another_point.y,
 		     vx: intersection.another_ball_v.x,
 		     vy: intersection.another_ball_v.y});
 	    }
@@ -198,7 +194,7 @@ function ball_intersection(moving_ball, another_ball, time) {
 	v = scale_vector(v, updated_speed(vector_norm(v), t));
 	another_v = scale_vector(another_v, updated_speed(vector_norm(another_v), t));
 	var v1v2 = ball_collision(v, pos1, another_v, pos2);
-	return {point: pos1, t: time + t,
+	return {point: pos1, t: time + t, another_point: pos2,
 		moving_ball_v: v1v2[0], another_ball_v: v1v2[1]};
     }
 }
@@ -319,16 +315,16 @@ function gauss_solve(matrix, vector) {
 	answer.push(undefined);
     }
     for (var i = N - 1; i >= 0; i-- ) {
-	for (var j = 0; j < N; j++ ) {
-	    if (Math.abs(matrix[i][j]) > 0 && answer[j] == undefined) {
-		var s = 0;
-		for (var k = 0; k < N && answer[k] != undefined; k++ ) {
-		    s += matrix[i][k] * answer[k];
-		}
-		answer[j] = (vector[i] - s) / matrix[i][j];
-		break;
-	    }
+	var j = find_max_index(matrix[i], function (x, j) {
+				   if (answer[j] == undefined)
+				       return Math.abs(x);
+				   return 0;
+			       });
+	var s = 0;
+	for (var k = 0; k < N && answer[k] != undefined; k++ ) {
+	    s += matrix[i][k] * answer[k];
 	}
+	answer[j] = (vector[i] - s) / matrix[i][j];
     }
     return answer;
 }
@@ -340,8 +336,12 @@ gauss_solve.test = function () {
     console.log(gauss_solve(
 		    [[1, -1],
 		     [1, 2]], [2, 4]));
+    console.log(gauss_solve(
+		    [[3.464101615137755, 0],
+		     [-2.220e-10, -4]],
+		    [-1.0999999999999999, -4.135085296108588]));
 };
-
+gauss_solve.test();
 
 function find_max(lst, fn) {
     return lst[find_max_index(lst, fn)];
@@ -351,7 +351,7 @@ function find_max_index(lst, fn) {
     fn = fn || function (x) { return x; };
     var m, c, index;
     for (var i = 0; i < lst.length; i++ ) {
-	c = fn(lst[i]);
+	c = fn(lst[i], i);
 	if (m == undefined || c > m) {
 	    m = c;
 	    index = i;
