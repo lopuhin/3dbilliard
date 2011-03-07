@@ -63,6 +63,14 @@ function create_borders(table_x_size, table_y_size) {
 
 
 var balls = create_balls(cue_start, piramid_start);
+
+// buggy initial position
+balls[0].x = -0.676121080136062;
+balls[0].y = -1.286662289618628;
+balls[1].x = -0.39966139683266544;
+balls[1].y = 0.2460576344232599;
+camera_angle_horiz = -192;
+
 var borders = create_borders(table_x_size, table_y_size);
 camera_center = {x: balls[0].x, y: balls[0].y};
 
@@ -74,6 +82,7 @@ function handleShoot() {
 	return;
     aiming = false;
     foreach(function(ball) { ball.animation = undefined; }, balls);
+    console.log('hadleShoot, camera_angle_horiz %s', camera_angle_horiz);
     var duration = assign_animations(balls, borders, camera_angle_horiz, initial_speed);
     setTimeout(
 	function () {

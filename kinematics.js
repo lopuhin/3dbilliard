@@ -207,16 +207,21 @@ function ball_intersection(moving_ball, another_ball, time) {
 
 function ball_collision(v1, pos1, v2, pos2) {
     // return speeds of balls after collision
+    console.log('ball_collision', v1, pos1, v2, pos2);
     var ds = scale_vector({x: pos2.x - pos1.x, y: pos2.y - pos1.y}, 1);
-    var angle = Math.atan2(ds.y, ds.x);
+    var angle = angle_between(ds, {x: 1, y: 0});
+    console.log('angle', angle);
     v1 = rotate_vector(v1, angle);
     v2 = rotate_vector(v2, angle);
+    console.log('rotated', v1, v2);
     // now ceners of balls are aligned with x axis
     var new_v1 = {x: v2.x, y: v1.y};
     var new_v2 = {x: v1.x, y: v2.y};
     // rotate them back
-    return [rotate_vector(new_v1, -angle),
-	    rotate_vector(new_v2, -angle)];
+    var res= [rotate_vector(new_v1, -angle),
+	      rotate_vector(new_v2, -angle)];
+    console.log('result', res[0], res[1]);
+    return res;
 }
 
 function border_intersection(moving_ball, border, time) {
