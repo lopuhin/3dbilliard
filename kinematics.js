@@ -104,7 +104,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 			    }
 		    }, balls);
 		foreach(function (border) {
-			    var x = border_intersection(moving_ball, border, time);
+			    var x = border_intersection(moving_ball, border);
 			    if (x && (!intersection || x.t < intersection.t) &&
 				x.t - time > eps) {
 				intersection = x;
@@ -127,7 +127,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
     console.log('final', intersection);
     if (intersection) {
 	var last_segment = last(c_ball1.animation);
-	last_segment.duration = intersection.t - time;
+	last_segment.duration = intersection.t - total_duration(c_ball1.animation);
 	if (intersection.moving_ball_v) {
 	    var segment = {x: intersection.point.x, y: intersection.point.y,
 			   vx: intersection.moving_ball_v.x,
@@ -135,7 +135,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 	    if (c_ball2) {
 		if (c_ball2.animation) {
 		    var s = last(c_ball2.animation);
-		    s.duration = intersection.t - time;
+		    s.duration = intersection.t - total_duration(c_ball2.animation);
 		} else { // add still animation
 		    c_ball2.animation = [{x: c_ball2.x, y: c_ball2.y,
 					  vx: 0, vy: 0, duration: intersection.t}];
@@ -200,7 +200,8 @@ function ball_intersection(moving_ball, another_ball, time) {
 	v = scale_vector(v, updated_speed(vector_norm(v), t));
 	another_v = scale_vector(another_v, updated_speed(vector_norm(another_v), t));
 	var v1v2 = ball_collision(v, pos1, another_v, pos2);
-	return {point: pos1, t: time + t, another_point: pos2,
+	return {point: pos1, t: total_duration(moving_ball.animation) + t,
+		another_point: pos2,
 		moving_ball_v: v1v2[0], another_ball_v: v1v2[1]};
     }
 }
@@ -224,8 +225,9 @@ function ball_collision(v1, pos1, v2, pos2) {
     return res;
 }
 
-function border_intersection(moving_ball, border, time) {
+function border_intersection(moving_ball, border) {
     // return time delta, point and normal of intersection with border
+    var time = total_duration(moving_ball.animation);
     var segment = last(moving_ball.animation);
     var border_vect = {x: border[1].x - border[0].x,
 		       y: border[1].y - border[0].y};
