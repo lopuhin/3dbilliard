@@ -44,7 +44,7 @@ function create_balls(cue_start, piramid_start) {
 	    n += 1;
 	}
     }
-    return [balls[0], balls[1]];
+    return balls; // [balls[0], balls[1]];
 }
 
 function create_borders(table_x_size, table_y_size) {

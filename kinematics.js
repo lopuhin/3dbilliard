@@ -1,37 +1,3 @@
-var friction_coef = 0.3;
-
-function covered_distance(v0, t) {
-    // distance, covered by ball, taking friction into account
-    return v0 * (1 - Math.exp(-friction_coef * t)) / friction_coef;
-}
-
-function updated_speed(v0, t) {
-    return v0 * Math.exp(-friction_coef * t);
-}
-
-function updated_speed_v(v, t) {
-    return scale_vector(v, updated_speed(vector_norm(v), t));
-}
-
-function updated_position(initial_pos, initial_v, t) {
-    var ds = scale_vector(initial_v, covered_distance(vector_norm(initial_v), t));
-    return add_vectors(initial_pos, ds);
-}
-
-function time_to_cover(v0, distance) {
-    // inverse of covered with v0 = const
-    return - Math.log(1 - distance * friction_coef / v0) / friction_coef;
-}
-
-function time_to_stop(v0) {
-    // time till the ball stops completly
-    var almost_zero_v = 0.05;
-    if (v0 <= almost_zero_v)
-	return 0;
-    return - Math.log(almost_zero_v / v0) / friction_coef;
-}
-
-
 function update_position(ball) {
     // update ball position if it is moving, using ball.animation -
     // an array of animation segments
@@ -48,11 +14,10 @@ function update_position(ball) {
 			return 'continue';
 		    }
 		    // update ball position
-		    var dt = now - segment.start;
 		    var v = {x: segment.vx, y: segment.vy};
-		    var ds = scale_vector(v, covered_distance(vector_norm(v), dt));
-		    ball.x = segment.x + ds.x;
-		    ball.y = segment.y + ds.y;
+		    var new_pos = updated_position(segment, v, now - segment.start);
+		    ball.x = new_pos.x;
+		    ball.y = new_pos.y;
 		} else { // just starting the segment
 		    segment.start = now;
 		    ball.x = segment.x;
@@ -66,7 +31,6 @@ function update_position(ball) {
 
 function assign_animations(balls, borders, camera_angle_horiz, initial_speed) {
     // calculate ball animations, return total animation duration
-
     // assign initial speed to cue
     var cue = balls[0];
     var cue_speed = vector_from_angle(initial_speed, to_radians(camera_angle_horiz - 90));
@@ -122,9 +86,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 		var last_v = {x: last_s.vx, y: last_s.vy};
 		var t = time + time_to_stop(vector_norm(last_v));
 		if ((!intersection || t < intersection.t) && t - time > eps) {
-		    var ds = scale_vector(
-			last_v, covered_distance(vector_norm(last_v), t - time));
-		    intersection = {t: t, point: add_vectors(last_s, ds)};
+		    intersection = {t: t, point: updated_position(last_s, last_v, t - time)};
 		    c_ball1 = moving_ball;
 		    c_ball2 = undefined;
 		}
@@ -291,23 +253,7 @@ function line_intersection(segment, line) {
     return {};
 }
 
-// animation utils
-
-function current_segment(animation, time) {
-    var current, t = 0;
-    foreach(function (s) {
-		if (s.duration)
-		    t += s.duration;
-		if (t >= time) {
-		    current = s;
-		    return 'break';
-		}
-		return 'continue';
-	    }, animation);
-    current = current || last(animation);
-    console.log('current_segment', current, animation, animation.length, t, time);
-    return current;
-}
+// animation utils, ball movement
 
 function total_duration(animation) {
     var duration = 0;
@@ -317,6 +263,39 @@ function total_duration(animation) {
 	    }, animation);
     return duration;
 }
+
+var friction_coef = 0.3;
+function covered_distance(v0, t) {
+    // distance, covered by ball, taking friction into account
+    return v0 * (1 - Math.exp(-friction_coef * t)) / friction_coef;
+}
+
+function updated_speed(v0, t) {
+    return v0 * Math.exp(-friction_coef * t);
+}
+
+function updated_speed_v(v, t) {
+    return scale_vector(v, updated_speed(vector_norm(v), t));
+}
+
+function updated_position(initial_pos, initial_v, t) {
+    var ds = scale_vector(initial_v, covered_distance(vector_norm(initial_v), t));
+    return add_vectors(initial_pos, ds);
+}
+
+function time_to_cover(v0, distance) {
+    // inverse of covered with v0 = const
+    return - Math.log(1 - distance * friction_coef / v0) / friction_coef;
+}
+
+function time_to_stop(v0) {
+    // time till the ball stops completly
+    var almost_zero_v = 0.05;
+    if (v0 <= almost_zero_v)
+	return 0;
+    return - Math.log(almost_zero_v / v0) / friction_coef;
+}
+
 
 // math utils
 
