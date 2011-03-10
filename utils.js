@@ -1,3 +1,7 @@
+// Various utility functions (TODO - split into files)
+
+// common utils
+
 function map(fn, lst) {
     var res = [];
     for (var i = 0; i < lst.length; i++ ) {
@@ -32,6 +36,27 @@ function any(fn, lst) {
 function in_list(lst, el) {
     return any(function (x) { return x == el; }, lst);
 }
+
+
+
+function find_max(lst, fn) {
+    return lst[find_max_index(lst, fn)];
+}
+
+
+function find_max_index(lst, fn) {
+    fn = fn || function (x) { return x; };
+    var m, c, index;
+    for (var i = 0; i < lst.length; i++ ) {
+	c = fn(lst[i], i);
+	if (m == undefined || c > m) {
+	    m = c;
+	    index = i;
+	}
+    }
+    return index;
+}
+
 
 
 // OpenGL utils

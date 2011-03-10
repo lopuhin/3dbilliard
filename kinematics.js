@@ -36,7 +36,7 @@ function assign_animations(balls, borders, camera_angle_horiz, initial_speed) {
     var cue_speed = vector_from_angle(initial_speed, to_radians(camera_angle_horiz - 90));
     cue.animation = [{x: cue.x, y: cue.y,
 		      vx: cue_speed.x, vy: cue_speed.y}];
-    next_intersection(balls, borders, 0, 0);
+    next_collision(balls, borders, 0, 0);
     var get_duration = function (ball) {
 	if (ball.animation) {
 	    return total_duration(ball.animation);
@@ -48,7 +48,7 @@ function assign_animations(balls, borders, camera_angle_horiz, initial_speed) {
 }
 
 // TODO - split, check if we really need prev_ball_pair
-function next_intersection(balls, borders, time, prev_ball_pair) {
+function next_collision(balls, borders, time, prev_ball_pair) {
     // find first intersection of any of moving balls, starting with @time
     // update animation segment, and call itself recurcively to find the next intersection
     var eps = 0.000001;
@@ -63,7 +63,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 				!prev_ball_pair || !(
 				    in_list(prev_ball_pair, moving_ball) &&
    					in_list(prev_ball_pair, another_ball)))) {
-				var x = ball_intersection(moving_ball, another_ball, time);
+				var x = ball_collision(moving_ball, another_ball, time);
 				if (x && (!intersection || x.t < intersection.t) &&
 				   x.t - time > eps) {
 				    intersection = x;
@@ -73,7 +73,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 			    }
 		    }, balls);
 		foreach(function (border) { // collisions with borders
-			    var x = border_intersection(moving_ball, border);
+			    var x = border_collision(moving_ball, border);
 			    if (x && (!intersection || x.t < intersection.t) &&
 				x.t - time > eps) {
 				intersection = x;
@@ -116,19 +116,20 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 	    }
 	    c_ball1.animation.push(segment);
 	}
+	// TODO - move out of function if we dont need prev_ball_pair
 	if (any(function (ball) {
 		return ball.animation && ! last(ball.animation).duration;
 		}, balls)) {
 	    prev_ball_pair = undefined;
 	    if (c_ball1 && c_ball2)
 		prev_ball_pair = [c_ball1, c_ball2];
-	    next_intersection(balls, borders, intersection.t, prev_ball_pair);
+	    next_collision(balls, borders, intersection.t, prev_ball_pair);
 	}
     }
 }
 
 
-function ball_intersection(moving_ball, another_ball, time) {
+function ball_collision(moving_ball, another_ball, time) {
     // find collision between @moving_ball and @another_ball, starting from @time,
     // knowing that all past collisions have already been found
     // TODO - better variable names
@@ -166,33 +167,30 @@ function ball_intersection(moving_ball, another_ball, time) {
 	var pos2 = add_vectors(another_pos, ds2);
 	v = scale_vector(v, updated_speed(vector_norm(v), t));
 	another_v = scale_vector(another_v, updated_speed(vector_norm(another_v), t));
-	var v1v2 = ball_collision(v, pos1, another_v, pos2);
+	var v1v2 = post_collision_speeds(v, pos1, another_v, pos2);
 	return {point: pos1, t: total_duration(moving_ball.animation) + t,
 		another_point: pos2,
 		moving_ball_v: v1v2[0], another_ball_v: v1v2[1]};
     }
+    return undefined;
 }
 
-function ball_collision(v1, pos1, v2, pos2) {
+function post_collision_speeds(v1, pos1, v2, pos2) {
     // return speeds of balls after collision
-    //console.log('ball_collision', v1, pos1, v2, pos2);
     var ds = scale_vector({x: pos2.x - pos1.x, y: pos2.y - pos1.y}, 1);
     var angle = angle_between(ds, {x: 1, y: 0});
-    //console.log('angle', angle);
     v1 = rotate_vector(v1, angle);
     v2 = rotate_vector(v2, angle);
-    //console.log('rotated', v1, v2);
     // now ceners of balls are aligned with x axis
     var new_v1 = {x: v2.x, y: v1.y};
     var new_v2 = {x: v1.x, y: v2.y};
     // rotate them back
     var res= [rotate_vector(new_v1, -angle),
 	      rotate_vector(new_v2, -angle)];
-    //console.log('result', res[0], res[1]);
     return res;
 }
 
-function border_intersection(moving_ball, border) {
+function border_collision(moving_ball, border) {
     // return time delta, point and normal of intersection with border
     var time = total_duration(moving_ball.animation);
     var segment = last(moving_ball.animation);
@@ -253,7 +251,7 @@ function line_intersection(segment, line) {
     return {};
 }
 
-// animation utils, ball movement
+// animation utils
 
 function total_duration(animation) {
     var duration = 0;
@@ -263,6 +261,8 @@ function total_duration(animation) {
 	    }, animation);
     return duration;
 }
+
+// ball movement
 
 var friction_coef = 0.3;
 function covered_distance(v0, t) {
@@ -340,24 +340,6 @@ gauss_solve.test = function () {
 		     [-2.220e-10, -4]],
 		    [-1.0999999999999999, -4.135085296108588]));
 };
-
-
-function find_max(lst, fn) {
-    return lst[find_max_index(lst, fn)];
-}
-
-function find_max_index(lst, fn) {
-    fn = fn || function (x) { return x; };
-    var m, c, index;
-    for (var i = 0; i < lst.length; i++ ) {
-	c = fn(lst[i], i);
-	if (m == undefined || c > m) {
-	    m = c;
-	    index = i;
-	}
-    }
-    return index;
-}
 
 
 function newton_solve(fn, start, limit) {
