@@ -137,7 +137,7 @@ function ball_collision(moving_ball, another_ball, time) {
     var v = {x: segment.vx, y: segment.vy};
     var dt1 = time - total_duration(moving_ball.animation);
     var pos = updated_position(segment, v, dt1);
-    v = updated_speed_v(v, dt1);
+    v = updated_speed(v, dt1);
     var another_v = {x: 0, y: 0};
     var another_pos = {x: another_ball.x, y: another_ball.y};
     var fn;
@@ -146,7 +146,7 @@ function ball_collision(moving_ball, another_ball, time) {
 	another_v = {x: another_segment.vx, y: another_segment.vy};
 	var dt2 = time - total_duration(another_ball.animation);
 	another_pos = updated_position(another_segment, another_v, dt2);
-	another_v = updated_speed_v(another_v, dt2);
+	another_v = updated_speed(another_v, dt2);
 	fn = function (t) {
 	    return distance(updated_position(pos, v, t),
 			    updated_position(another_pos, another_v, t)) -
@@ -165,10 +165,10 @@ function ball_collision(moving_ball, another_ball, time) {
 	var ds2 = scale_vector(another_v,
 			       covered_distance(vector_norm(another_v), t));
 	var pos2 = add_vectors(another_pos, ds2);
-	v = scale_vector(v, updated_speed(vector_norm(v), t));
-	another_v = scale_vector(another_v, updated_speed(vector_norm(another_v), t));
+	v = updated_speed(v, t);
+	another_v = updated_speed(another_v, t);
 	var v1v2 = post_collision_speeds(v, pos1, another_v, pos2);
-	return {point: pos1, t: total_duration(moving_ball.animation) + t,
+	return {point: pos1, t: time + t,
 		another_point: pos2,
 		moving_ball_v: v1v2[0], another_ball_v: v1v2[1]};
     }
@@ -225,9 +225,7 @@ function border_collision(moving_ball, border) {
     }
     if (intersections.length) {
 	var intersection = find_max(intersections, function (x) { return -x.t; });
-	var updated_v = scale_vector(
-	    segment_v,
-	    updated_speed(vector_norm(segment_v), intersection.t - time));
+	var updated_v = updated_speed(segment_v, intersection.t - time);
 	intersection.moving_ball_v = rotate_vector(
 	    updated_v, 2 * angle_between(updated_v, normal) - Math.PI);
 	return intersection;
@@ -270,12 +268,9 @@ function covered_distance(v0, t) {
     return v0 * (1 - Math.exp(-friction_coef * t)) / friction_coef;
 }
 
-function updated_speed(v0, t) {
-    return v0 * Math.exp(-friction_coef * t);
-}
-
-function updated_speed_v(v, t) {
-    return scale_vector(v, updated_speed(vector_norm(v), t));
+function updated_speed(v, t) {
+    var new_v = vector_norm(v) * Math.exp(-friction_coef * t);
+    return scale_vector(v, new_v);
 }
 
 function updated_position(initial_pos, initial_v, t) {
