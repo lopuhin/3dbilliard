@@ -9,6 +9,14 @@ function updated_speed(v0, t) {
     return v0 * Math.exp(-friction_coef * t);
 }
 
+function updated_speed_v(v, t) {
+    return scale_vector(v, updated_speed(vector_norm(v), t));
+}
+
+function updated_position(initial_pos, initial_v, t) {
+    var ds = scale_vector(initial_v, covered_distance(vector_norm(initial_v), t));
+    return add_vectors(initial_pos, ds);
+}
 
 function time_to_cover(v0, distance) {
     // inverse of covered with v0 = const
@@ -66,19 +74,16 @@ function assign_animations(balls, borders, camera_angle_horiz, initial_speed) {
 		      vx: cue_speed.x, vy: cue_speed.y}];
     next_intersection(balls, borders, 0, 0);
     var get_duration = function (ball) {
-	var total_duration = 0;
 	if (ball.animation) {
-	    foreach(function (segment) {
-			if (segment.duration)
-			    total_duration += segment.duration;
-		    }, ball.animation);
+	    return total_duration(ball.animation);
+	} else {
+	    return 0;
 	}
-	return total_duration;
     };
     return find_max(map(get_duration, balls));
 }
 
-// TODO - split
+// TODO - split, check if we really need prev_ball_pair
 function next_intersection(balls, borders, time, prev_ball_pair) {
     // find first intersection of any of moving balls, starting with @time
     // update animation segment, and call itself recurcively to find the next intersection
@@ -88,7 +93,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
     foreach(
 	function (moving_ball) {
 	    if (moving_ball.animation && !last(moving_ball.animation).duration) {
-		foreach(function (another_ball) {
+		foreach(function (another_ball) { // ball collisions
 			    // balls just collided can not collide again
 			    if (moving_ball != another_ball && (
 				!prev_ball_pair || !(
@@ -103,7 +108,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 				}
 			    }
 		    }, balls);
-		foreach(function (border) {
+		foreach(function (border) { // collisions with borders
 			    var x = border_intersection(moving_ball, border);
 			    if (x && (!intersection || x.t < intersection.t) &&
 				x.t - time > eps) {
@@ -112,6 +117,7 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 				c_ball2 = undefined;
 			    }
 			}, borders);
+		// stopping due to friction
 		var last_s = last(moving_ball.animation);
 		var last_v = {x: last_s.vx, y: last_s.vy};
 		var t = time + time_to_stop(vector_norm(last_v));
@@ -161,39 +167,38 @@ function next_intersection(balls, borders, time, prev_ball_pair) {
 
 
 function ball_intersection(moving_ball, another_ball, time) {
+    // find collision between @moving_ball and @another_ball, starting from @time,
+    // knowing that all past collisions have already been found
+    // TODO - better variable names
     var segment = last(moving_ball.animation);
-    var fn;
     var v = {x: segment.vx, y: segment.vy};
+    var dt1 = time - total_duration(moving_ball.animation);
+    var pos = updated_position(segment, v, dt1);
+    v = updated_speed_v(v, dt1);
     var another_v = {x: 0, y: 0};
     var another_pos = {x: another_ball.x, y: another_ball.y};
-    if (another_ball.animation) {
-	var another_segment = current_segment(another_ball.animation, time);
-	if (another_segment) {
-	    another_v = {x: another_segment.vx, y: another_segment.vy};
-	    another_pos = another_segment;
-	    fn = function (t) {
-		var ds1 = scale_vector(v, covered_distance(vector_norm(v), t));
-		var ds2 = scale_vector(another_v,
-				       covered_distance(vector_norm(another_v), t));
-		return distance(add_vectors(segment, ds1),
-				add_vectors(another_segment, ds2)) -
-		    another_ball.radius - moving_ball.radius;
-	    };
-	} else {
-	    another_pos = last(another_ball.animation);
-	}
-    }
-    if (!fn) {
+    var fn;
+    if (another_ball.animation && another_ball.animation.length) {
+	var another_segment = last(another_ball.animation);
+	another_v = {x: another_segment.vx, y: another_segment.vy};
+	var dt2 = time - total_duration(another_ball.animation);
+	another_pos = updated_position(another_segment, another_v, dt2);
+	another_v = updated_speed_v(another_v, dt2);
 	fn = function (t) {
-	    var ds = scale_vector(v, covered_distance(vector_norm(v), t));
-	    return distance(add_vectors(segment, ds), another_ball) -
+	    return distance(updated_position(pos, v, t),
+			    updated_position(another_pos, another_v, t)) -
+		another_ball.radius - moving_ball.radius;
+	};
+    } else {
+	fn = function (t) {
+	    return distance(updated_position(pos, v, t), another_pos) -
 		another_ball.radius - moving_ball.radius;
 	};
     }
     var t = newton_solve(fn, 0, 100); // FIXME - calc limit
     if (t != undefined && t >= 1e-8) {
 	var ds1 = scale_vector(v, covered_distance(vector_norm(v), t));
-	var pos1 = add_vectors(segment, ds1);
+	var pos1 = add_vectors(pos, ds1);
 	var ds2 = scale_vector(another_v,
 			       covered_distance(vector_norm(another_v), t));
 	var pos2 = add_vectors(another_pos, ds2);
